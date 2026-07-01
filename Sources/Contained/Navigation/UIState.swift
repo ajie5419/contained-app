@@ -368,9 +368,9 @@ enum ImageGrouping: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .none: return "None"
-        case .registry: return "Registry"
-        case .status: return "Status"
+        case .none: return L10n.text("None")
+        case .registry: return L10n.text("Registry")
+        case .status: return L10n.text("Status")
         }
     }
     var symbol: String {
@@ -387,9 +387,9 @@ enum ImageSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .status: return "Status"
-        case .name: return "Name"
-        case .tags: return "Tags"
+        case .status: return L10n.text("Status")
+        case .name: return L10n.text("Name")
+        case .tags: return L10n.text("Tags")
         }
     }
     var symbol: String {
@@ -406,9 +406,9 @@ enum ImageFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .all: return "All images"
-        case .updates: return "Updates only"
-        case .errors: return "Errors only"
+        case .all: return L10n.text("All images")
+        case .updates: return L10n.text("Updates only")
+        case .errors: return L10n.text("Errors only")
         }
     }
     var symbol: String {
@@ -423,7 +423,7 @@ enum ImageFilter: String, CaseIterable, Identifiable {
 enum TemplateGrouping: String, CaseIterable, Identifiable {
     case none, image
     var id: String { rawValue }
-    var title: String { self == .none ? "None" : "Image" }
+    var title: String { self == .none ? L10n.text("None") : L10n.text("Image") }
     var symbol: String { self == .none ? "bookmark" : "shippingbox" }
 }
 
@@ -432,9 +432,9 @@ enum TemplateSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .newest: return "Newest"
-        case .name: return "Name"
-        case .image: return "Image"
+        case .newest: return L10n.text("Newest")
+        case .name: return L10n.text("Name")
+        case .image: return L10n.text("Image")
         }
     }
     var symbol: String {
@@ -451,9 +451,9 @@ enum NetworkGrouping: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .none: return "None"
-        case .kind: return "Kind"
-        case .mode: return "Mode"
+        case .none: return L10n.text("None")
+        case .kind: return L10n.text("Kind")
+        case .mode: return L10n.text("Mode")
         }
     }
     var symbol: String {
@@ -470,9 +470,9 @@ enum NetworkSort: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .name: return "Name"
-        case .mode: return "Mode"
-        case .plugin: return "Plugin"
+        case .name: return L10n.text("Name")
+        case .mode: return L10n.text("Mode")
+        case .plugin: return L10n.text("Plugin")
         }
     }
     var symbol: String {
@@ -489,9 +489,9 @@ enum NetworkFilter: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .all: return "All networks"
-        case .custom: return "Custom only"
-        case .builtin: return "Built-in only"
+        case .all: return L10n.text("All networks")
+        case .custom: return L10n.text("Custom only")
+        case .builtin: return L10n.text("Built-in only")
         }
     }
     var symbol: String {

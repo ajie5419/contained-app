@@ -26,10 +26,10 @@ struct InfoButton: View {
             .buttonStyle(.plain)
             .opacity(visible || showing ? 1 : 0)
             .allowsHitTesting(visible || showing)
-            .help(text)                       // hover still works as a bonus for mouse users
-            .accessibilityLabel("More info")
+            .help(L10n.text(text))            // hover still works as a bonus for mouse users
+            .accessibilityLabel(L10n.text("More info"))
             .popover(isPresented: $showing, arrowEdge: .trailing) {
-                Text(.init(text))             // Markdown-aware so tips can use **bold** / `code`
+                Text(.init(L10n.text(text)))  // Markdown-aware so tips can use **bold** / `code`
                     .font(.callout)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)

@@ -48,7 +48,7 @@ struct PaletteResultCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: item.title)
-                        ResourceBadgeText(text: item.kind.rawValue,
+                        ResourceBadgeText(text: item.kind.title,
                                           font: .caption2.weight(.semibold),
                                           foreground: selected ? .accentColor : .secondary)
                     }
@@ -85,7 +85,7 @@ struct PaletteResultCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: name)
-                        ResourceBadgeText(text: snapshot.state.rawValue.capitalized,
+                        ResourceBadgeText(text: runtimeStatusTitle(snapshot.state),
                                           font: .caption2.weight(.semibold),
                                           foreground: snapshot.state == .running ? .green : .secondary)
                     }
@@ -167,9 +167,9 @@ struct PaletteResultCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: title)
-                        ResourceBadgeText(text: subtitle, font: .caption2.weight(.semibold))
+                        ResourceBadgeText(text: L10n.text(subtitle), font: .caption2.weight(.semibold))
                     }
-                    ResourceCardSubtitleText(text: footer)
+                    ResourceCardSubtitleText(text: L10n.text(footer))
                 }
             } trailing: {
                 accessory
@@ -200,7 +200,7 @@ struct PaletteResultCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: tint.displayName)
-                        ResourceBadgeText(text: app.settings.accentTint == tint ? "Current" : "Tint",
+                        ResourceBadgeText(text: app.settings.accentTint == tint ? L10n.text("Current") : L10n.text("Tint"),
                                           font: .caption2.weight(.semibold),
                                           foreground: app.settings.accentTint == tint ? .accentColor : .secondary)
                     }
@@ -263,8 +263,17 @@ struct PaletteResultCard: View {
                 .font(.caption2)
                 .foregroundStyle(snapshot.state == .running ? .green : .secondary)
         } text: {
-            ResourceCardMetricText(text: snapshot.state.rawValue.capitalized)
+            ResourceCardMetricText(text: runtimeStatusTitle(snapshot.state))
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    private func runtimeStatusTitle(_ status: RuntimeStatus) -> String {
+        switch status {
+        case .unknown: return L10n.text("Unknown")
+        case .stopped: return L10n.text("Stopped")
+        case .running: return L10n.text("Running")
+        case .stopping: return L10n.text("Stopping")
         }
     }
 }

@@ -36,7 +36,7 @@ struct ToolbarPageSwitcher: View {
             ForEach(AppSectionGroup.allCases) { group in
                 let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
                 if !sections.isEmpty {
-                    Section(group.rawValue) {
+                    Section(group.title) {
                         ForEach(sections) { section in
                             Button {
                                 ui.navigate(to: section)
@@ -63,7 +63,7 @@ struct ToolbarPageSwitcher: View {
                 Text(ui.selectedSection.title)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text(ui.selectedSection.group.rawValue)
+                Text(ui.selectedSection.group.title)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -133,8 +133,8 @@ struct ToolbarViewOptions: View {
     }
 
     private var subtitle: String {
-        var parts = ["by \(ui.grouping.title)"]
-        if ui.runningOnly { parts.append("running") }
+        var parts = [L10n.text("by %@", ui.grouping.title)]
+        if ui.runningOnly { parts.append(L10n.text("running")) }
         return parts.joined(separator: " · ")
     }
 }
@@ -200,9 +200,9 @@ struct ToolbarPageContextOptions: View {
                 }
                 GlassButton {
                     ForEach(SystemContent.SystemPage.allCases) { page in
-                        GlassButtonItem(help: page.rawValue, isIcon: true, action: { ui.systemPage = page }) {
+                        GlassButtonItem(help: page.title, isIcon: true, action: { ui.systemPage = page }) {
                             Image(systemName: page.systemImage)
-                                .foregroundStyle(Color.white)
+                                .foregroundStyle(ui.systemPage == page ? Color.accentColor : Color.secondary)
                                 .opacity(ui.systemPage == page ? 1 : 0.62)
                         }
                     }
@@ -225,12 +225,12 @@ struct ToolbarPageContextOptions: View {
         case .settings:
             GlassButton {
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    GlassButtonItem(help: page.rawValue, isIcon: true, action: {
+                    GlassButtonItem(help: page.title, isIcon: true, action: {
                         ui.settingsPage = page
                         ui.navigate(to: .settings)
                     }) {
                         Image(systemName: page.systemImage)
-                            .foregroundStyle(Color.white)
+                            .foregroundStyle(ui.settingsPage == page ? Color.accentColor : Color.secondary)
                     }
                 }
             }
@@ -267,14 +267,14 @@ struct ToolbarPageFilterOptions: View {
                     Label("All events", systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
                     ForEach(EventKind.allCases, id: \.self) { kind in
-                        Label(kind.rawValue.capitalized, systemImage: kind.symbol).tag(EventKind?.some(kind))
+                        Label(kind.title, systemImage: kind.symbol).tag(EventKind?.some(kind))
                     }
                 }
                 .pickerStyle(.inline)
             } labelContent: {
                 activityFilterLabel
             }
-            .help(ui.activityFilter == nil ? "Filter Activity" : "Filter: \(ui.activityFilter!.rawValue.capitalized)")
+            .help(ui.activityFilter == nil ? L10n.text("Filter Activity") : L10n.text("Filter: %@", ui.activityFilter!.title))
         default:
             EmptyView()
         }
@@ -291,7 +291,7 @@ struct ToolbarPageFilterOptions: View {
                 Text("Activity")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text(ui.activityFilter?.rawValue.capitalized ?? "All events")
+                Text(ui.activityFilter?.title ?? L10n.text("All events"))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -340,7 +340,7 @@ private struct ImageViewOptions: View {
     }
 
     private var imageSubtitle: String {
-        var parts = ["by \(ui.imageGrouping.title)"]
+        var parts = [L10n.text("by %@", ui.imageGrouping.title)]
         if ui.imageFilter != .all { parts.append(ui.imageFilter.title) }
         return parts.joined(separator: " · ")
     }
@@ -367,7 +367,7 @@ private struct TemplateViewOptions: View {
         } labelContent: {
             optionLabel(symbol: ui.templateGrouping.symbol,
                         title: "Templates",
-                        subtitle: "by \(ui.templateGrouping.title) · \(ui.templateSort.title)")
+                        subtitle: L10n.text("by %@ · %@", ui.templateGrouping.title, ui.templateSort.title))
         }
         .help("Template grouping")
     }
@@ -407,7 +407,7 @@ private struct NetworkViewOptions: View {
     }
 
     private var networkSubtitle: String {
-        var parts = ["by \(ui.networkGrouping.title)"]
+        var parts = [L10n.text("by %@", ui.networkGrouping.title)]
         if ui.networkFilter != .all { parts.append(ui.networkFilter.title) }
         return parts.joined(separator: " · ")
     }

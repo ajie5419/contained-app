@@ -12,7 +12,13 @@ enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: String { rawValue }
 
-    var displayName: String { rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .stable: return L10n.text("Stable")
+        case .beta: return L10n.text("Beta")
+        case .nightly: return L10n.text("Nightly")
+        }
+    }
 
     /// The git branch whose `appcast.xml` (at repo root) backs this channel.
     var branch: String {
@@ -34,9 +40,9 @@ enum UpdateChannel: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var footnote: String {
         switch self {
-        case .stable:  return "Only finished releases."
-        case .beta:    return "Pre-release builds, ahead of stable. May be rough."
-        case .nightly: return "The latest build from every commit. Expect rough edges."
+        case .stable:  return L10n.text("Only finished releases.")
+        case .beta:    return L10n.text("Pre-release builds, ahead of stable. May be rough.")
+        case .nightly: return L10n.text("The latest build from every commit. Expect rough edges.")
         }
     }
 }

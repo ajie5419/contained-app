@@ -13,19 +13,19 @@ enum AppLogLevel: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .off: return "Off"
-        case .errors: return "Errors"
-        case .important: return "Important"
-        case .verbose: return "Verbose"
+        case .off: return L10n.text("Off")
+        case .errors: return L10n.text("Errors")
+        case .important: return L10n.text("Important")
+        case .verbose: return L10n.text("Verbose")
         }
     }
 
     var footnote: String {
         switch self {
-        case .off: return "No app events are recorded."
-        case .errors: return "Only failures are recorded."
-        case .important: return "User actions, failures, and state changes are recorded."
-        case .verbose: return "Adds routine refreshes and background work."
+        case .off: return L10n.text("No app events are recorded.")
+        case .errors: return L10n.text("Only failures are recorded.")
+        case .important: return L10n.text("User actions, failures, and state changes are recorded.")
+        case .verbose: return L10n.text("Adds routine refreshes and background work.")
         }
     }
 
@@ -47,8 +47,8 @@ enum AppLogDestination: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .activity: return "Activity history"
-        case .console: return "macOS Console"
+        case .activity: return L10n.text("Activity history")
+        case .console: return L10n.text("macOS Console")
         }
     }
 }
@@ -66,13 +66,13 @@ enum AppLogCategory: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .lifecycle: return "Containers"
-        case .image: return "Images"
-        case .compose: return "Compose"
-        case .system: return "System"
-        case .health: return "Health"
-        case .registry: return "Registries"
-        case .ui: return "Interface"
+        case .lifecycle: return L10n.text("Containers")
+        case .image: return L10n.text("Images")
+        case .compose: return L10n.text("Compose")
+        case .system: return L10n.text("System")
+        case .health: return L10n.text("Health")
+        case .registry: return L10n.text("Registries")
+        case .ui: return L10n.text("Interface")
         }
     }
 

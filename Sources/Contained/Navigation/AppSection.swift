@@ -42,15 +42,15 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .containers: return "Containers"
-        case .images: return "Images"
-        case .volumes: return "Volumes"
-        case .networks: return "Networks"
-        case .system: return "System"
-        case .registries: return "Registries"
-        case .templates: return "Templates"
-        case .activity: return "Activity"
-        case .settings: return "Settings"
+        case .containers: return L10n.text("Containers")
+        case .images: return L10n.text("Images")
+        case .volumes: return L10n.text("Volumes")
+        case .networks: return L10n.text("Networks")
+        case .system: return L10n.text("System")
+        case .registries: return L10n.text("Registries")
+        case .templates: return L10n.text("Templates")
+        case .activity: return L10n.text("Activity")
+        case .settings: return L10n.text("Settings")
         }
     }
 
@@ -86,4 +86,12 @@ enum AppSectionGroup: String, CaseIterable, Identifiable {
     case system = "System"
 
     var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .workloads: return L10n.text("Workloads")
+        case .infra: return L10n.text("Infra")
+        case .system: return L10n.text("System")
+        }
+    }
 }

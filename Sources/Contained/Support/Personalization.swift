@@ -265,8 +265,8 @@ enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
-        case .area: return "Area"
-        case .line: return "Line"
+        case .area: return L10n.text("Area")
+        case .line: return L10n.text("Line")
         }
     }
 }

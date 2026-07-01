@@ -53,7 +53,7 @@ struct PaletteItem: Identifiable {
         var items: [PaletteItem] = []
         for section in AppSection.allCases {
             items.append(PaletteItem(title: section.title,
-                                     subtitle: section.group.rawValue,
+                                     subtitle: section.group.title,
                                      kind: .navigation,
                                      icon: section.symbol,
                                      tint: .secondary) {
@@ -206,7 +206,7 @@ struct PaletteItem: Identifiable {
             (.about, "info.circle"),
         ]
         var items = settingsPages.map { page, icon in
-            PaletteItem(title: "\(page.rawValue) Settings", subtitle: "settings",
+            PaletteItem(title: L10n.text("%@ Settings", page.title), subtitle: L10n.text("settings"),
                         keywords: ["preferences", page.rawValue.lowercased()],
                         kind: .settings, icon: icon, tint: .secondary) {
                 ui.openSettings(to: page)
@@ -389,13 +389,27 @@ enum PaletteItemKind: String {
     /// palette into labelled sections when there's no active query.
     var section: (order: Int, title: String) {
         switch self {
-        case .navigation:        return (0, "Navigate")
-        case .create, .search:   return (1, "Create & Search")
-        case .container:         return (2, "Containers")
-        case .image:             return (3, "Images")
-        case .resource:          return (4, "Volumes & Networks")
-        case .settings, .toggle: return (5, "Settings")
-        case .action:            return (6, "Actions")
+        case .navigation:        return (0, L10n.text("Navigate"))
+        case .create, .search:   return (1, L10n.text("Create & Search"))
+        case .container:         return (2, L10n.text("Containers"))
+        case .image:             return (3, L10n.text("Images"))
+        case .resource:          return (4, L10n.text("Volumes & Networks"))
+        case .settings, .toggle: return (5, L10n.text("Settings"))
+        case .action:            return (6, L10n.text("Actions"))
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .action: return L10n.text("Action")
+        case .create: return L10n.text("Create")
+        case .navigation: return L10n.text("Navigate")
+        case .settings: return L10n.text("Settings")
+        case .toggle: return L10n.text("Toggle")
+        case .image: return L10n.text("Image")
+        case .container: return L10n.text("Container")
+        case .resource: return L10n.text("Resource")
+        case .search: return L10n.text("Search")
         }
     }
 }

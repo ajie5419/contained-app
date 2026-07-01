@@ -15,6 +15,22 @@ enum EventKind: String, Codable, CaseIterable, Sendable {
     case healthcheck    // health transitions
     case alert          // anything surfaced as a banner/notification
 
+    var title: String {
+        switch self {
+        case .lifecycle: return L10n.text("Lifecycle")
+        case .image: return L10n.text("Images")
+        case .compose: return L10n.text("Compose")
+        case .system: return L10n.text("System")
+        case .registry: return L10n.text("Registries")
+        case .ui: return L10n.text("Interface")
+        case .pull: return L10n.text("Pulls")
+        case .build: return L10n.text("Builds")
+        case .watchdog: return L10n.text("Watchdog")
+        case .healthcheck: return L10n.text("Health checks")
+        case .alert: return L10n.text("Alerts")
+        }
+    }
+
     var symbol: String {
         switch self {
         case .lifecycle: return "play.circle"

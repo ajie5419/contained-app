@@ -26,6 +26,14 @@ struct SystemContent: View {
         case volumes = "Volumes"
 
         var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .engine: return L10n.text("Engine")
+            case .automation: return L10n.text("Automation")
+            case .volumes: return L10n.text("Volumes")
+            }
+        }
+
         var systemImage: String {
             switch self {
             case .engine: return "server.rack"
@@ -36,9 +44,9 @@ struct SystemContent: View {
 
         var subtitle: String {
             switch self {
-            case .engine: return "Container engine"
-            case .automation: return "Background work"
-            case .volumes: return "Named, temp, and path mounts"
+            case .engine: return L10n.text("Container engine")
+            case .automation: return L10n.text("Background work")
+            case .volumes: return L10n.text("Named, temp, and path mounts")
             }
         }
     }
@@ -75,6 +83,14 @@ struct SystemContent: View {
         case named = "Named"
         case anonymous = "Temp"
         case localPath = "Local path"
+
+        var title: String {
+            switch self {
+            case .named: return L10n.text("Named")
+            case .anonymous: return L10n.text("Temp")
+            case .localPath: return L10n.text("Local path")
+            }
+        }
 
         var symbol: String {
             switch self {
@@ -172,9 +188,9 @@ struct SystemContent: View {
     @ViewBuilder
     private var pageButtons: some View {
         ForEach(SystemPage.allCases) { item in
-            GlassButtonItem(help: item.rawValue, isIcon: true, action: { setPage(item) }) {
+            GlassButtonItem(help: item.title, isIcon: true, action: { setPage(item) }) {
                 Image(systemName: item.systemImage)
-                    .foregroundStyle(Color.white)
+                    .foregroundStyle(activePage == item ? Color.accentColor : Color.secondary)
                     .opacity(activePage == item ? 1 : 0.62)
             }
         }
@@ -319,7 +335,7 @@ struct SystemContent: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: Tokens.Space.xs) {
                     Text(entry.title).font(.system(.callout, design: .monospaced)).lineLimit(1)
-                    ResourceBadgeText(text: entry.kind.rawValue)
+                    ResourceBadgeText(text: entry.kind.title)
                 }
                 if let subtitle = volumeRowSubtitle(entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)

@@ -29,7 +29,7 @@ struct GlassButtonItem<Label: View>: View {
     private var itemForegroundStyle: AnyShapeStyle {
         if role == .destructive { return AnyShapeStyle(Color.red) }
         if let tint { return AnyShapeStyle(tint) }
-        return AnyShapeStyle(Color.white)
+        return AnyShapeStyle(Color.primary)
     }
 
     init(role: ButtonRole? = nil, tint: Color? = nil, help: String = "",

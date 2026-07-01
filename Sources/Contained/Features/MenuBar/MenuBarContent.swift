@@ -123,7 +123,7 @@ struct MenuBarContent: View {
                 Button("Open Contained") { activate() }
                 Divider()
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    Button(page.rawValue) { activate(); openSettings(to: page) }
+                    Button(page.title) { activate(); openSettings(to: page) }
                 }
             }
 

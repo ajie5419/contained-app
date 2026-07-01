@@ -166,8 +166,8 @@ struct ToolbarCommandPalette: View {
                 .foregroundStyle(.secondary)
                 .help("Back to commands")
             } else {
-                ResourceBadgeText(text: "\(flatItems.count) match\(flatItems.count == 1 ? "" : "es")")
-                ResourceBadgeText(text: "\(localImageMatches) local image\(localImageMatches == 1 ? "" : "s")")
+                ResourceBadgeText(text: L10n.text("%d matches", flatItems.count))
+                ResourceBadgeText(text: L10n.text("%d local images", localImageMatches))
                 Spacer()
                 if !trimmedQuery.isEmpty {
                     // "Hit search on a search entry" — pins the Docker Hub scope and keeps the typed
@@ -193,10 +193,10 @@ struct ToolbarCommandPalette: View {
             if hubError != nil { return "Couldn't reach Docker Hub" }
             if trimmedQuery.isEmpty { return "Popular images" }
             let n = hubResults.count
-            return "\(n) result\(n == 1 ? "" : "s")"
+            return L10n.text("%d results", n)
         case .localImages:
             let n = flatItems.count
-            return "\(n) image\(n == 1 ? "" : "s")"
+            return L10n.text("%d images", n)
         }
     }
 
@@ -278,7 +278,7 @@ struct ToolbarCommandPalette: View {
             keyboardHint("esc", scope == nil ? "Close" : "Clear scope")
             Spacer()
             if let selected = selectedItem {
-                ResourceBadgeText(text: selected.kind.rawValue)
+                ResourceBadgeText(text: selected.kind.title)
             }
         }
         .padding(.horizontal, Tokens.Space.l)
@@ -363,7 +363,7 @@ struct ToolbarCommandPalette: View {
         }
         return matched.map { group in
             PaletteItem(title: "Run \(Format.shortImage(group.primaryReference))",
-                        subtitle: "\(group.references.count) tag\(group.references.count == 1 ? "" : "s")",
+                        subtitle: L10n.text("%d tags", group.references.count),
                         keywords: group.references,
                         kind: .image,
                         visual: .imageGroup(group),

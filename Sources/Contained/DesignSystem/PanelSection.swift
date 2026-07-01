@@ -57,7 +57,7 @@ struct PanelSection<Content: View>: View {
                 }
                 if let footer {
                     // Markdown-aware so footers can use **bold** / `code`, like the old Form footers.
-                    Text(.init(footer)).font(.caption).foregroundStyle(.secondary)
+                    Text(.init(L10n.text(footer))).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.leading, Tokens.Space.xs)
                 }
@@ -82,7 +82,7 @@ struct PanelSection<Content: View>: View {
                             .fill(Color.accentColor)
                             .frame(width: 6, height: 6)
                     }
-                    Text(header)
+                    Text(L10n.text(header))
                         .font(.headline)
                         .foregroundStyle(highlighted ? Color.accentColor : Color.primary)
                 }
@@ -123,13 +123,13 @@ struct PanelRow<Trailing: View>: View {
             HStack(spacing: Tokens.Space.m) {
                 VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.xs) {
-                        Text(title).foregroundStyle(labelColor)
+                        Text(L10n.text(title)).foregroundStyle(labelColor)
                         if let info { InfoButton(info, visible: labelHovering) }
                     }
                     .contentShape(Rectangle())
                     .onHover { labelHovering = $0 }
                     if let subtitle {
-                        Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                        Text(L10n.text(subtitle)).font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -137,7 +137,7 @@ struct PanelRow<Trailing: View>: View {
                 trailing()
             }
             if let error {
-                Text(error).font(.caption).foregroundStyle(.red)
+                Text(L10n.text(error)).font(.caption).foregroundStyle(.red)
             }
         }
         .frame(maxWidth: .infinity)
@@ -188,7 +188,7 @@ struct PanelField<Control: View>: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Tokens.Space.m) {
                 HStack(spacing: Tokens.Space.xs) {
-                    Text(label)
+                    Text(L10n.text(label))
                         .foregroundStyle(labelColor)
                     if let info { InfoButton(info, visible: labelHovering) }
                 }
@@ -198,7 +198,7 @@ struct PanelField<Control: View>: View {
                 control().frame(maxWidth: .infinity)
             }
             if let error {
-                Text(error).font(.caption).foregroundStyle(.red)
+                Text(L10n.text(error)).font(.caption).foregroundStyle(.red)
                     .padding(.leading, labelWidth + Tokens.Space.m)
             }
         }

@@ -9,10 +9,10 @@ enum ContainerGrouping: String, CaseIterable, Identifiable, Codable, Sendable {
     /// Short noun shown in the toolbar subtitle and the menu ("by Network").
     var title: String {
         switch self {
-        case .network: return "Network"
-        case .volume:  return "Volume"
-        case .image:   return "Image"
-        case .flat:    return "Flat"
+        case .network: return L10n.text("Network")
+        case .volume:  return L10n.text("Volume")
+        case .image:   return L10n.text("Image")
+        case .flat:    return L10n.text("Flat")
         }
     }
 
@@ -34,9 +34,9 @@ enum ContainerSort: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .name:   return "Name"
-        case .status: return "Status"
-        case .image:  return "Image"
+        case .name:   return L10n.text("Name")
+        case .status: return L10n.text("Status")
+        case .image:  return L10n.text("Image")
         }
     }
 

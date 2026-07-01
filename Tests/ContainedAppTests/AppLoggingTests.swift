@@ -40,10 +40,33 @@ struct AppLoggingTests {
         #expect(!AppLogLevel.errors.includes(.debug))
     }
 
+    @Test func simplifiedChineseLocalizationsLoadFromModuleBundle() {
+        #expect(L10n.text("Settings", preferredLanguages: ["en"]) == "Settings")
+        #expect(L10n.text("Settings", preferredLanguages: ["zh-Hans"]) == "设置")
+        #expect(L10n.text("Containers", preferredLanguages: ["zh-CN"]) == "容器")
+        #expect(L10n.text("Missing Key", preferredLanguages: ["zh-Hans"]) == "Missing Key")
+        #expect(catalogTranslation("Settings") == "设置")
+        #expect(catalogTranslation("Containers") == "容器")
+    }
+
     private func suiteDefaults() -> UserDefaults {
         let name = "ContainedTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
         defaults.removePersistentDomain(forName: name)
         return defaults
+    }
+
+    private func catalogTranslation(_ key: String) -> String? {
+        guard let url = Bundle.module.url(forResource: "Localizable", withExtension: "xcstrings"),
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let strings = root["strings"] as? [String: Any],
+              let entry = strings[key] as? [String: Any],
+              let localizations = entry["localizations"] as? [String: Any],
+              let zhHans = localizations["zh-Hans"] as? [String: Any],
+              let stringUnit = zhHans["stringUnit"] as? [String: Any] else {
+            return nil
+        }
+        return stringUnit["value"] as? String
     }
 }

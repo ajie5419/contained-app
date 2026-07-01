@@ -15,14 +15,14 @@ struct SheetHeader<Trailing: View>: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.headline).lineLimit(1)
+                Text(L10n.text(title)).font(.headline).lineLimit(1)
                 if let subtitle {
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(L10n.text(subtitle)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer()
             GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: cancelIcon, help: cancelHelp, isCancel: true, action: onCancel)
+                GlassButtonItem(systemName: cancelIcon, help: L10n.text(cancelHelp), isCancel: true, action: onCancel)
             }
             trailing()
         }
@@ -54,16 +54,16 @@ struct PanelHeader<Trailing: View>: View {
                 Color.clear
                     .frame(width: leadingReserve, height: Tokens.Toolbar.buttonGroupHeight)
             }
-            GlassButtonItem(systemName: symbol, help: title, isLabel: true)
+            GlassButtonItem(systemName: symbol, help: L10n.text(title), isLabel: true)
                 .frame(width: Tokens.Toolbar.buttonGroupHeight,
                        height: Tokens.Toolbar.buttonGroupHeight,
                        alignment: .center)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title)
+                Text(L10n.text(title))
                     .font(.headline)
                     .lineLimit(1)
                 if let subtitle {
-                    Text(subtitle)
+                    Text(L10n.text(subtitle))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

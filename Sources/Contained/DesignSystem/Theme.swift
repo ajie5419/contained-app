@@ -123,7 +123,9 @@ extension View {
 /// Material/elevation constants for reusable app surfaces. Keep glass, shadow, and stroke choices
 /// here so collapsed controls and expanded panels do not drift into near-duplicates.
 enum AppMaterial {
-    static let toolbarHoverFill = Color.white.opacity(0.1)
+    static let toolbarHoverFill = Color.primary.opacity(0.08)
+    static let toolbarControlFill = Color.primary.opacity(0.035)
+    static let toolbarControlStroke = Color.primary.opacity(0.16)
     static let floatingPanelStroke = Color.white.opacity(0.18)
     static let floatingPanelShadow = Color.black.opacity(0.24)
     static let floatingPanelShadowRadius: CGFloat = 24
@@ -139,7 +141,19 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: String { rawValue }
 
-    var displayName: String { self == .multicolor ? "App Accent" : rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .multicolor: return L10n.text("App Accent")
+        case .graphite: return L10n.text("Graphite")
+        case .azure: return L10n.text("Azure")
+        case .teal: return L10n.text("Teal")
+        case .coral: return L10n.text("Coral")
+        case .indigo: return L10n.text("Indigo")
+        case .green: return L10n.text("Green")
+        case .amber: return L10n.text("Amber")
+        case .pink: return L10n.text("Pink")
+        }
+    }
 
     /// True for the "follow the app accent" option (rendered with a marker in the swatch row).
     var followsAppAccent: Bool { self == .multicolor }
@@ -184,7 +198,13 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
 enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case system, light, dark
     var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .system: return L10n.text("System")
+        case .light: return L10n.text("Light")
+        case .dark: return L10n.text("Dark")
+        }
+    }
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -208,7 +228,13 @@ enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
 enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
     case small, medium, large
     var id: String { rawValue }
-    var displayName: String { rawValue.capitalized }
+    var displayName: String {
+        switch self {
+        case .small: return L10n.text("Small")
+        case .medium: return L10n.text("Medium")
+        case .large: return L10n.text("Large")
+        }
+    }
     var resourceSize: ResourceCardSize {
         switch self {
         case .small: return .small
@@ -240,22 +266,22 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
-        case .glassClear:          return "Glass (Clear)"
-        case .glassRegular:        return "Glass (Regular)"
-        case .fullScreenUI:        return "Full-screen UI (default)"
-        case .underWindowBackground: return "Under Window"
-        case .underPageBackground: return "Under Page"
-        case .windowBackground:    return "Window"
-        case .contentBackground:   return "Content"
-        case .sidebar:             return "Sidebar"
-        case .headerView:          return "Header"
-        case .titlebar:            return "Titlebar"
-        case .sheet:               return "Sheet"
-        case .popover:             return "Popover"
-        case .menu:                return "Menu"
-        case .selection:           return "Selection"
-        case .hudWindow:           return "HUD"
-        case .toolTip:             return "Tooltip"
+        case .glassClear:          return L10n.text("Glass (Clear)")
+        case .glassRegular:        return L10n.text("Glass (Regular)")
+        case .fullScreenUI:        return L10n.text("Full-screen UI (default)")
+        case .underWindowBackground: return L10n.text("Under Window")
+        case .underPageBackground: return L10n.text("Under Page")
+        case .windowBackground:    return L10n.text("Window")
+        case .contentBackground:   return L10n.text("Content")
+        case .sidebar:             return L10n.text("Sidebar")
+        case .headerView:          return L10n.text("Header")
+        case .titlebar:            return L10n.text("Titlebar")
+        case .sheet:               return L10n.text("Sheet")
+        case .popover:             return L10n.text("Popover")
+        case .menu:                return L10n.text("Menu")
+        case .selection:           return L10n.text("Selection")
+        case .hudWindow:           return L10n.text("HUD")
+        case .toolTip:             return L10n.text("Tooltip")
         }
     }
 
@@ -374,11 +400,15 @@ private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
     @Environment(\.buttonMaterial) private var buttonMaterial
 
     func body(content: Content) -> some View {
+        let readableChrome = content
+            .background { shape.fill(AppMaterial.toolbarControlFill) }
+            .overlay { shape.stroke(AppMaterial.toolbarControlStroke, lineWidth: 1) }
+
         if let glass = buttonMaterial.glass {
-            content.glassEffect(glass.interactive(), in: shape)
+            readableChrome.glassEffect(glass.interactive(), in: shape)
         } else {
             // A vibrancy material chosen for buttons — back the capsule with it and clip.
-            content.background {
+            readableChrome.background {
                 VisualEffectBackground(material: buttonMaterial.nsMaterial, blendingMode: .withinWindow)
                     .clipShape(shape)
             }
