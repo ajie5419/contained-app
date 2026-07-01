@@ -15,16 +15,20 @@ struct MenuBarContent: View {
     private var cliLabel: String {
         switch app.bootstrap {
         case .ready:
-            return app.cliVersion.map { "CLI v\($0)" } ?? "CLI ready"
+            return app.cliVersion.map { L10n.text("CLI v%@", $0) } ?? L10n.text("CLI ready")
         case .checking:
-            return "Checking CLI"
+            return L10n.text("Checking CLI")
         case .cliMissing:
-            return "CLI missing"
+            return L10n.text("CLI missing")
         case .unsupported(let version):
-            return "CLI v\(version) unsupported"
+            return L10n.text("CLI v%@ unsupported", version)
         case .serviceStopped:
-            return "Service stopped"
+            return L10n.text("Service stopped")
         }
+    }
+
+    private var localizedServiceLabel: String {
+        L10n.text(app.serviceLabel)
     }
 
     var body: some View {
@@ -41,21 +45,21 @@ struct MenuBarContent: View {
 
             Divider()
 
-            Menu("Service") {
+            Menu(L10n.text("Service")) {
                 statusItem
                 Divider()
                 if app.serviceHealthy {
-                    Button("Stop Service") { Task { await app.stopService() } }
+                    Button(L10n.text("Stop Service")) { Task { await app.stopService() } }
                 } else {
-                    Button("Start Service") { Task { await app.startService() } }
+                    Button(L10n.text("Start Service")) { Task { await app.startService() } }
                 }
-                Button("Restart Service") { Task { await app.restartService() } }
+                Button(L10n.text("Restart Service")) { Task { await app.restartService() } }
             }
 
-            Menu("Containers") {
-                Menu("Running Containers") {
+            Menu(L10n.text("Containers")) {
+                Menu(L10n.text("Running Containers")) {
                     if store.running.isEmpty {
-                        disabledPlaceholder("No running containers")
+                        disabledPlaceholder(L10n.text("No running containers"))
                     } else {
                         ForEach(store.running) { snapshot in
                             Button(containerName(for: snapshot)) {
@@ -65,9 +69,9 @@ struct MenuBarContent: View {
                     }
                 }
 
-                Menu("Stopped Containers") {
+                Menu(L10n.text("Stopped Containers")) {
                     if stopped.isEmpty {
-                        disabledPlaceholder("No stopped containers")
+                        disabledPlaceholder(L10n.text("No stopped containers"))
                     } else {
                         ForEach(stopped) { snapshot in
                             Button(containerName(for: snapshot)) {
@@ -78,66 +82,66 @@ struct MenuBarContent: View {
                 }
             }
 
-            Menu("Create") {
-                Button("Run Container…") { activate(); route(.runContainer) }
-                Button("Pull Image…") { activate(); route(.pullImage) }
+            Menu(L10n.text("Create")) {
+                Button(L10n.text("Run Container…")) { activate(); route(.runContainer) }
+                Button(L10n.text("Pull Image…")) { activate(); route(.pullImage) }
                     .disabled(!app.settings.hubSearchEnabled)
-                Button("Build Image…") { activate(); route(.build) }
+                Button(L10n.text("Build Image…")) { activate(); route(.build) }
                     .disabled(!app.settings.imageBuildEnabled)
                 Divider()
-                Button("New Volume…") { activate(); route(.createVolume) }
-                Button("New Network…") { activate(); route(.createNetwork) }
-                Button("Import Compose…") { activate(); ComposeImport.pickAndImport(app: app, ui: ui) }
+                Button(L10n.text("New Volume…")) { activate(); route(.createVolume) }
+                Button(L10n.text("New Network…")) { activate(); route(.createNetwork) }
+                Button(L10n.text("Import Compose…")) { activate(); ComposeImport.pickAndImport(app: app, ui: ui) }
                     .disabled(!app.settings.composeImportEnabled)
             }
 
-            Menu("Navigate") {
-                Button("Containers") { activate(); navigate(to: .containers) }
-                Button("Images") { activate(); openSectionOrMorph(.images, morph: .updates) }
-                Button("Templates") { activate(); openSectionOrMorph(.templates, morph: .templates) }
-                Button("System") { activate(); openSectionOrMorph(.system, morph: .system) }
-                Button("Activity") { activate(); openSectionOrMorph(.activity, morph: .activity) }
+            Menu(L10n.text("Navigate")) {
+                Button(L10n.text("Containers")) { activate(); navigate(to: .containers) }
+                Button(L10n.text("Images")) { activate(); openSectionOrMorph(.images, morph: .updates) }
+                Button(L10n.text("Templates")) { activate(); openSectionOrMorph(.templates, morph: .templates) }
+                Button(L10n.text("System")) { activate(); openSectionOrMorph(.system, morph: .system) }
+                Button(L10n.text("Activity")) { activate(); openSectionOrMorph(.activity, morph: .activity) }
             }
 
-            Menu("Shortcuts") {
+            Menu(L10n.text("Shortcuts")) {
                 if app.settings.keyboardShortcutsEnabled {
-                    Button(ui.sidebarVisible ? "Hide Sidebar" : "Show Sidebar") { activate(); ui.setSidebarVisible(!ui.sidebarVisible) }
+                    Button(L10n.text(ui.sidebarVisible ? "Hide Sidebar" : "Show Sidebar")) { activate(); ui.setSidebarVisible(!ui.sidebarVisible) }
                         .keyboardShortcut("s", modifiers: .command)
                         .disabled(!app.settings.sidebarNavigationEnabled)
-                    Button("Search This Page") { activate(); ui.focusSearch() }
+                    Button(L10n.text("Search This Page")) { activate(); ui.focusSearch() }
                         .keyboardShortcut("f", modifiers: .command)
-                    Button("Settings") { activate(); openSettings(to: .appearance) }
+                    Button(L10n.text("Settings")) { activate(); openSettings(to: .appearance) }
                         .keyboardShortcut(";", modifiers: .command)
-                    Button("Run Container") { activate(); route(.runContainer) }
+                    Button(L10n.text("Run Container")) { activate(); route(.runContainer) }
                         .keyboardShortcut("n", modifiers: .command)
-                    Button("Run Image Check") { Task { await app.runImageUpdateSweepNow() } }
+                    Button(L10n.text("Run Image Check")) { Task { await app.runImageUpdateSweepNow() } }
                         .keyboardShortcut("u", modifiers: .command)
-                    Button("Activity") { activate(); route(.activityHistory) }
+                    Button(L10n.text("Activity")) { activate(); route(.activityHistory) }
                         .keyboardShortcut("i", modifiers: .command)
                 } else {
-                    disabledPlaceholder("Enable keyboard shortcuts in Settings → Experimental")
+                    disabledPlaceholder(L10n.text("Enable keyboard shortcuts in Settings → Experimental"))
                 }
             }
 
-            Menu("Settings") {
-                Button("Open Contained") { activate() }
+            Menu(L10n.text("Settings")) {
+                Button(L10n.text("Open Contained")) { activate() }
                 Divider()
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
                     Button(page.title) { activate(); openSettings(to: page) }
                 }
             }
 
-            Menu("Help") {
-                Button("Check for Updates…") {
+            Menu(L10n.text("Help")) {
+                Button(L10n.text("Check for Updates…")) {
                     activate()
                     app.updater.checkForUpdates()
                 }
-                Button("About Contained") { activate(); openSettings(to: .about) }
-                Button("Reveal CLI Binary in Finder") { activate(); revealCLIBinary() }
+                Button(L10n.text("About Contained")) { activate(); openSettings(to: .about) }
+                Button(L10n.text("Reveal CLI Binary in Finder")) { activate(); revealCLIBinary() }
                 Divider()
-                Button("Release Notes") { activate(); NSWorkspace.shared.open(Links.releasesURL) }
-                Button("Troubleshooting") { activate(); NSWorkspace.shared.open(Links.troubleshootingURL) }
-                Button("Keyboard Shortcuts") { activate(); NSWorkspace.shared.open(Links.shortcutsURL) }
+                Button(L10n.text("Release Notes")) { activate(); NSWorkspace.shared.open(Links.releasesURL) }
+                Button(L10n.text("Troubleshooting")) { activate(); NSWorkspace.shared.open(Links.troubleshootingURL) }
+                Button(L10n.text("Keyboard Shortcuts")) { activate(); NSWorkspace.shared.open(Links.shortcutsURL) }
             }
 
             Divider()
@@ -161,13 +165,13 @@ struct MenuBarContent: View {
             }
 
             HStack(spacing: 10) {
-                Label(app.serviceLabel, systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                Label(localizedServiceLabel, systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                     .foregroundStyle(app.serviceHealthy ? .green : .secondary)
                 Text(app.settings.updateChannel.displayName)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
                 if unreadActivityCount > 0 {
-                    Label("\(unreadActivityCount) unread", systemImage: "bell.badge")
+                    Label(unreadCountText, systemImage: "bell.badge")
                         .foregroundStyle(.secondary)
                 }
             }
@@ -178,30 +182,51 @@ struct MenuBarContent: View {
     @ViewBuilder
     private var infoGrid: some View {
         VStack(alignment: .leading, spacing: 8) {
-            infoRow("Containers", value: "\(store.running.count) running · \(stopped.count) stopped")
-            infoRow("Resources", value: "\(app.images.count) images · \(app.volumes.count) volumes · \(app.networks.count) networks")
-            infoRow("Bootstrap", value: cliLabel)
-            infoRow("Activity", value: unreadActivityCount > 0 ? "\(unreadActivityCount) unread" : "All caught up")
+            infoRow(L10n.text("Containers"), value: containersSummary)
+            infoRow(L10n.text("Resources"), value: resourcesSummary)
+            infoRow(L10n.text("Bootstrap"), value: cliLabel)
+            infoRow(L10n.text("Activity"), value: unreadActivityCount > 0 ? unreadCountText : L10n.text("All caught up"))
         }
         .font(.caption)
     }
 
     private var actionStrip: some View {
         HStack(spacing: 8) {
-            miniAction("Open", systemImage: "app")
-            miniAction("Run", systemImage: "plus") { route(.runContainer) }
-            miniAction("Activity", systemImage: unreadActivityCount > 0 ? "bell.badge" : "bell") { route(.activityHistory) }
-            miniAction("Updates", systemImage: "arrow.triangle.2.circlepath") { app.updater.checkForUpdates() }
+            miniAction(L10n.text("Open"), systemImage: "app")
+            miniAction(L10n.text("Run"), systemImage: "plus") { route(.runContainer) }
+            miniAction(L10n.text("Activity"), systemImage: unreadActivityCount > 0 ? "bell.badge" : "bell") { route(.activityHistory) }
+            miniAction(L10n.text("Updates"), systemImage: "arrow.triangle.2.circlepath") { app.updater.checkForUpdates() }
         }
     }
 
     private var footerRow: some View {
         HStack(spacing: 8) {
-            Button("Open Contained") { activate() }
+            Button(L10n.text("Open Contained")) { activate() }
             Spacer(minLength: 0)
-            Button("Quit") { NSApplication.shared.terminate(nil) }
+            Button(L10n.text("Quit")) { NSApplication.shared.terminate(nil) }
         }
         .buttonStyle(.borderless)
+    }
+
+    private var containersSummary: String {
+        [countText(store.running.count, singular: "%d running", plural: "%d running"),
+         countText(stopped.count, singular: "%d stopped", plural: "%d stopped")]
+            .joined(separator: " · ")
+    }
+
+    private var resourcesSummary: String {
+        [countText(app.images.count, singular: "%d image", plural: "%d images"),
+         countText(app.volumes.count, singular: "%d volume", plural: "%d volumes"),
+         countText(app.networks.count, singular: "%d network", plural: "%d networks")]
+            .joined(separator: " · ")
+    }
+
+    private var unreadCountText: String {
+        countText(unreadActivityCount, singular: "%d unread", plural: "%d unread")
+    }
+
+    private func countText(_ count: Int, singular: String, plural: String) -> String {
+        L10n.text(count == 1 ? singular : plural, count)
     }
 
     @ViewBuilder
@@ -237,7 +262,7 @@ struct MenuBarContent: View {
 
     @ViewBuilder
     private var statusItem: some View {
-        Label(app.serviceLabel,
+        Label(localizedServiceLabel,
               systemImage: app.serviceHealthy ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
             .foregroundStyle(app.serviceHealthy ? .green : .secondary)
     }

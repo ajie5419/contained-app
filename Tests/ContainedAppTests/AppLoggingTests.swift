@@ -49,6 +49,20 @@ struct AppLoggingTests {
         #expect(catalogTranslation("Containers") == "容器")
     }
 
+    @Test func menuBarLocalizationsCoverVisibleStrings() {
+        #expect(L10n.text("Running", preferredLanguages: ["zh-CN"]) == "运行中")
+        #expect(L10n.text("Resources", preferredLanguages: ["zh-CN"]) == "资源")
+        #expect(L10n.text("Bootstrap", preferredLanguages: ["zh-CN"]) == "启动状态")
+        #expect(L10n.text("Open", preferredLanguages: ["zh-CN"]) == "打开")
+        #expect(L10n.text("Run", preferredLanguages: ["zh-CN"]) == "运行")
+        #expect(L10n.text("Quit", preferredLanguages: ["zh-CN"]) == "退出")
+        #expect(L10n.text("%d unread", preferredLanguages: ["zh-CN"], 766) == "766 条未读")
+        #expect(L10n.text("%d running", preferredLanguages: ["zh-CN"], 2) == "2 个运行中")
+        #expect(L10n.text("%d networks", preferredLanguages: ["zh-CN"], 1) == "1 个网络")
+        #expect(catalogTranslation("Running Containers") == "运行中的容器")
+        #expect(catalogTranslation("No stopped containers") == "没有已停止的容器")
+    }
+
     private func suiteDefaults() -> UserDefaults {
         let name = "ContainedTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: name)!
