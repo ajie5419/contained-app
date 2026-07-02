@@ -124,6 +124,9 @@ extension View {
 /// here so collapsed controls and expanded panels do not drift into near-duplicates.
 enum AppMaterial {
     static let toolbarHoverFill = Color.primary.opacity(0.08)
+    static func toolbarInteractiveHoverFill(for colorScheme: ColorScheme) -> Color {
+        Color.primary.opacity(colorScheme == .light ? 0.10 : 0.08)
+    }
     static let toolbarControlFill = Color.primary.opacity(0.035)
     static let toolbarControlStroke = Color.primary.opacity(0.16)
     static let floatingPanelStroke = Color.white.opacity(0.18)
@@ -141,19 +144,7 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var id: String { rawValue }
 
-    var displayName: String {
-        switch self {
-        case .multicolor: return L10n.text("App Accent")
-        case .graphite: return L10n.text("Graphite")
-        case .azure: return L10n.text("Azure")
-        case .teal: return L10n.text("Teal")
-        case .coral: return L10n.text("Coral")
-        case .indigo: return L10n.text("Indigo")
-        case .green: return L10n.text("Green")
-        case .amber: return L10n.text("Amber")
-        case .pink: return L10n.text("Pink")
-        }
-    }
+    var displayName: String { self == .multicolor ? "App Accent" : rawValue.capitalized }
 
     /// True for the "follow the app accent" option (rendered with a marker in the swatch row).
     var followsAppAccent: Bool { self == .multicolor }
@@ -188,23 +179,43 @@ enum AppTint: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
-    /// Parse a `contained.tint` label value, falling back to multicolor.
+    /// Parse a legacy `contained.tint` label value, falling back to multicolor.
     static func parse(_ raw: String?) -> AppTint {
         guard let raw, let tint = AppTint(rawValue: raw.lowercased()) else { return .multicolor }
         return tint
     }
 }
 
+enum ColorLayerBlendMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case normal, softLight, overlay, multiply, screen
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .normal: return "Normal"
+        case .softLight: return "Soft Light"
+        case .overlay: return "Overlay"
+        case .multiply: return "Multiply"
+        case .screen: return "Screen"
+        }
+    }
+
+    var blendMode: BlendMode {
+        switch self {
+        case .normal: return .normal
+        case .softLight: return .softLight
+        case .overlay: return .overlay
+        case .multiply: return .multiply
+        case .screen: return .screen
+        }
+    }
+}
+
 enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case system, light, dark
     var id: String { rawValue }
-    var displayName: String {
-        switch self {
-        case .system: return L10n.text("System")
-        case .light: return L10n.text("Light")
-        case .dark: return L10n.text("Dark")
-        }
-    }
+    var displayName: String { rawValue.capitalized }
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil
@@ -228,13 +239,7 @@ enum AppearanceMode: String, CaseIterable, Identifiable, Codable, Sendable {
 enum CardDensity: String, CaseIterable, Identifiable, Codable, Sendable {
     case small, medium, large
     var id: String { rawValue }
-    var displayName: String {
-        switch self {
-        case .small: return L10n.text("Small")
-        case .medium: return L10n.text("Medium")
-        case .large: return L10n.text("Large")
-        }
-    }
+    var displayName: String { rawValue.capitalized }
     var resourceSize: ResourceCardSize {
         switch self {
         case .small: return .small
@@ -266,22 +271,22 @@ enum WindowMaterial: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var displayName: String {
         switch self {
-        case .glassClear:          return L10n.text("Glass (Clear)")
-        case .glassRegular:        return L10n.text("Glass (Regular)")
-        case .fullScreenUI:        return L10n.text("Full-screen UI (default)")
-        case .underWindowBackground: return L10n.text("Under Window")
-        case .underPageBackground: return L10n.text("Under Page")
-        case .windowBackground:    return L10n.text("Window")
-        case .contentBackground:   return L10n.text("Content")
-        case .sidebar:             return L10n.text("Sidebar")
-        case .headerView:          return L10n.text("Header")
-        case .titlebar:            return L10n.text("Titlebar")
-        case .sheet:               return L10n.text("Sheet")
-        case .popover:             return L10n.text("Popover")
-        case .menu:                return L10n.text("Menu")
-        case .selection:           return L10n.text("Selection")
-        case .hudWindow:           return L10n.text("HUD")
-        case .toolTip:             return L10n.text("Tooltip")
+        case .glassClear:          return "Glass (Clear)"
+        case .glassRegular:        return "Glass (Regular)"
+        case .fullScreenUI:        return "Full-screen UI (default)"
+        case .underWindowBackground: return "Under Window"
+        case .underPageBackground: return "Under Page"
+        case .windowBackground:    return "Window"
+        case .contentBackground:   return "Content"
+        case .sidebar:             return "Sidebar"
+        case .headerView:          return "Header"
+        case .titlebar:            return "Titlebar"
+        case .sheet:               return "Sheet"
+        case .popover:             return "Popover"
+        case .menu:                return "Menu"
+        case .selection:           return "Selection"
+        case .hudWindow:           return "HUD"
+        case .toolTip:             return "Tooltip"
         }
     }
 
@@ -327,6 +332,8 @@ extension EnvironmentValues {
     @Entry var buttonMaterial: WindowMaterial = .glassClear
     /// The user-chosen resource-card material, seeded at the app root.
     @Entry var cardMaterial: WindowMaterial = .glassRegular
+    /// Optional color/gradient wash layered into glass buttons.
+    @Entry var buttonTintStyle: GlassButtonTintStyle = .disabled
 }
 
 private struct SheetMaterial: ViewModifier {
@@ -400,15 +407,11 @@ private struct ToolbarControlMaterial<S: Shape>: ViewModifier {
     @Environment(\.buttonMaterial) private var buttonMaterial
 
     func body(content: Content) -> some View {
-        let readableChrome = content
-            .background { shape.fill(AppMaterial.toolbarControlFill) }
-            .overlay { shape.stroke(AppMaterial.toolbarControlStroke, lineWidth: 1) }
-
         if let glass = buttonMaterial.glass {
-            readableChrome.glassEffect(glass.interactive(), in: shape)
+            content.glassEffect(glass.interactive(), in: shape)
         } else {
             // A vibrancy material chosen for buttons — back the capsule with it and clip.
-            readableChrome.background {
+            content.background {
                 VisualEffectBackground(material: buttonMaterial.nsMaterial, blendingMode: .withinWindow)
                     .clipShape(shape)
             }

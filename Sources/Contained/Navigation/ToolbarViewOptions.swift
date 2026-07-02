@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import ContainedCore
 
 private struct ToolbarGlassMenuButton<LabelContent: View, MenuContent: View>: View {
@@ -26,17 +27,21 @@ private struct ToolbarGlassMenuButton<LabelContent: View, MenuContent: View>: Vi
     }
 }
 
-/// The page switcher seated in the titlebar. It replaces the old sidebar as the primary way to jump
-/// between app pages while using the same toolbar button language as the filter control.
+/// The toolbar page switcher. In the experimental toolbar shell it complements the sidebar, and when
+/// the sidebar is hidden it becomes the compact page-jump control.
 struct ToolbarPageSwitcher: View {
+    @Environment(AppModel.self) private var app
     @Environment(UIState.self) private var ui
+    @Query private var events: [EventRecord]
+    @Query private var templates: [Template]
 
     var body: some View {
         ToolbarGlassMenuButton {
             ForEach(AppSectionGroup.allCases) { group in
-                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
+                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
+                    .filter { $0.group == group && ($0 != .build || app.settings.imageBuildEnabled) }
                 if !sections.isEmpty {
-                    Section(group.title) {
+                    Section(group.rawValue) {
                         ForEach(sections) { section in
                             Button {
                                 ui.navigate(to: section)
@@ -50,31 +55,46 @@ struct ToolbarPageSwitcher: View {
         } labelContent: {
             labelContent
         }
-        .help("Switch page")
+        .help(L10n.text("Switch page"))
     }
 
     private var labelContent: some View {
-        HStack(spacing: Tokens.Toolbar.searchIconGap) {
-            Image(systemName: ui.selectedSection.symbol)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(ui.selectedSection.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text(ui.selectedSection.group.title)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
+        ToolbarTitleSubtitleLabel(symbol: ui.selectedSection.symbol,
+                                  title: ui.selectedSection.title,
+                                  subtitle: pageSubtitle)
+    }
+
+    private var pageSubtitle: String {
+        switch ui.selectedSection {
+        case .containers:
+            let total = app.containers.snapshots.count
+            let running = app.containers.running.count
+            return "\(total) \(L10n.text(total == 1 ? "container" : "containers")) · \(running) \(L10n.text("running"))"
+        case .images:
+            let groups = LocalImageTagGroup.groups(for: app.images)
+            let updates = groups.filter {
+                app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable
+            }.count
+            return "\(groups.count) \(L10n.text("local")) · \(updates) \(L10n.text(updates == 1 ? "update" : "updates"))"
+        case .build:
+            return L10n.text("Dockerfile")
+        case .volumes:
+            return "\(app.volumes.count) \(L10n.text(app.volumes.count == 1 ? "volume" : "volumes"))"
+        case .networks:
+            return "\(app.networks.count) \(L10n.text(app.networks.count == 1 ? "network" : "networks"))"
+        case .system:
+            return app.serviceLabel
+        case .templates:
+            return "\(templates.count) \(L10n.text("saved"))"
+        case .activity:
+            let unread = events.lazy.filter { !$0.isRead }.count
+            let base = "\(events.count) event\(events.count == 1 ? "" : "s")"
+            return unread > 0 ? "\(base) · \(unread) unread" : base
+        case .settings:
+            return L10n.text("Preferences")
+        case .registries:
+            return L10n.text("Credentials")
         }
-        .lineLimit(1)
-        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
-        .frame(height: Tokens.Toolbar.buttonGroupHeight)
-        .contentShape(Rectangle())
     }
 }
 
@@ -105,36 +125,18 @@ struct ToolbarViewOptions: View {
         } labelContent: {
             labelContent
         }
-        .help("Container filters")
+        .help(L10n.text("Container filters"))
     }
 
     private var labelContent: some View {
-        HStack(spacing: Tokens.Toolbar.searchIconGap) {
-            Image(systemName: ui.grouping.symbol)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Containers")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .lineLimit(1)
-        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
-        .frame(height: Tokens.Toolbar.buttonGroupHeight)
-        .contentShape(Rectangle())
+        ToolbarTitleSubtitleLabel(symbol: ui.grouping.symbol,
+                                  title: L10n.text("Containers"),
+                                  subtitle: subtitle)
     }
 
     private var subtitle: String {
-        var parts = [L10n.text("by %@", ui.grouping.title)]
-        if ui.runningOnly { parts.append(L10n.text("running")) }
+        var parts = ["by \(ui.grouping.title)"]
+        if ui.runningOnly { parts.append("running") }
         return parts.joined(separator: " · ")
     }
 }
@@ -162,6 +164,8 @@ struct ToolbarPageContextOptions: View {
                 }
             }
             .help(imagesSubtitle)
+        case .build:
+            EmptyView()
         case .networks:
             GlassButton {
                 GlassButtonItem(systemName: "plus", help: "New Network") {
@@ -171,7 +175,7 @@ struct ToolbarPageContextOptions: View {
                     Task { await app.refreshNetworks() }
                 }
             }
-            .help("\(app.networks.count) network\(app.networks.count == 1 ? "" : "s")")
+            .help("\(app.networks.count) \(L10n.text(app.networks.count == 1 ? "network" : "networks"))")
         case .volumes:
             GlassButton {
                 GlassButtonItem(systemName: "plus", help: "New Volume") {
@@ -181,7 +185,7 @@ struct ToolbarPageContextOptions: View {
                     Task { await app.refreshSystemResources() }
                 }
             }
-            .help("\(app.volumes.count) volume\(app.volumes.count == 1 ? "" : "s")")
+            .help("\(app.volumes.count) \(L10n.text(app.volumes.count == 1 ? "volume" : "volumes"))")
         case .system:
             HStack(spacing: Tokens.Toolbar.groupSpacing) {
                 GlassButton {
@@ -200,9 +204,11 @@ struct ToolbarPageContextOptions: View {
                 }
                 GlassButton {
                     ForEach(SystemContent.SystemPage.allCases) { page in
-                        GlassButtonItem(help: page.title, isIcon: true, action: { ui.systemPage = page }) {
+                        GlassButtonItem(tint: ui.systemPage == page ? .accentColor : .secondary,
+                                        help: page.title,
+                                        isIcon: true,
+                                        action: { ui.systemPage = page }) {
                             Image(systemName: page.systemImage)
-                                .foregroundStyle(ui.systemPage == page ? Color.accentColor : Color.secondary)
                                 .opacity(ui.systemPage == page ? 1 : 0.62)
                         }
                     }
@@ -225,12 +231,14 @@ struct ToolbarPageContextOptions: View {
         case .settings:
             GlassButton {
                 ForEach(SettingsContent.SettingsPage.allCases) { page in
-                    GlassButtonItem(help: page.title, isIcon: true, action: {
+                    GlassButtonItem(tint: ui.settingsPage == page ? .accentColor : .secondary,
+                                    help: page.title,
+                                    isIcon: true,
+                                    action: {
                         ui.settingsPage = page
                         ui.navigate(to: .settings)
                     }) {
                         Image(systemName: page.systemImage)
-                            .foregroundStyle(ui.settingsPage == page ? Color.accentColor : Color.secondary)
                     }
                 }
             }
@@ -242,7 +250,7 @@ struct ToolbarPageContextOptions: View {
     private var imagesSubtitle: String {
         let groups = LocalImageTagGroup.groups(for: app.images)
         let updates = groups.filter { app.imageUpdateStatus(for: $0.primaryReference).state == .updateAvailable }.count
-        return "\(groups.count) local · \(updates) update\(updates == 1 ? "" : "s")"
+        return "\(groups.count) \(L10n.text("local")) · \(updates) \(L10n.text(updates == 1 ? "update" : "updates"))"
     }
 
 }
@@ -256,6 +264,8 @@ struct ToolbarPageFilterOptions: View {
             ToolbarViewOptions()
         case .images:
             ImageViewOptions()
+        case .build:
+            EmptyView()
         case .templates:
             TemplateViewOptions()
         case .networks:
@@ -264,7 +274,7 @@ struct ToolbarPageFilterOptions: View {
             @Bindable var ui = ui
             ToolbarGlassMenuButton {
                 Picker("Filter", selection: $ui.activityFilter) {
-                    Label("All events", systemImage: "tray.full").tag(EventKind?.none)
+                    Label(L10n.text("All events"), systemImage: "tray.full").tag(EventKind?.none)
                     Divider()
                     ForEach(EventKind.allCases, id: \.self) { kind in
                         Label(kind.title, systemImage: kind.symbol).tag(EventKind?.some(kind))
@@ -281,28 +291,10 @@ struct ToolbarPageFilterOptions: View {
     }
 
     private var activityFilterLabel: some View {
-        HStack(spacing: Tokens.Toolbar.searchIconGap) {
-            Image(systemName: ui.activityFilter == nil ? "line.3.horizontal.decrease"
-                                                       : "line.3.horizontal.decrease.circle.fill")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Activity")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                Text(ui.activityFilter?.title ?? L10n.text("All events"))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .lineLimit(1)
-        .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
-        .frame(height: Tokens.Toolbar.buttonGroupHeight)
-        .contentShape(Rectangle())
+        ToolbarTitleSubtitleLabel(symbol: ui.activityFilter == nil ? "line.3.horizontal.decrease"
+                                                                   : "line.3.horizontal.decrease.circle.fill",
+                                  title: L10n.text("Activity"),
+                                  subtitle: ui.activityFilter?.title ?? L10n.text("All events"))
     }
 }
 
@@ -333,14 +325,14 @@ private struct ImageViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.imageGrouping.symbol,
-                        title: "Images",
+                        title: L10n.text("Images"),
                         subtitle: imageSubtitle)
         }
-        .help("Image filters")
+        .help(L10n.text("Image filters"))
     }
 
     private var imageSubtitle: String {
-        var parts = [L10n.text("by %@", ui.imageGrouping.title)]
+        var parts = ["by \(ui.imageGrouping.title)"]
         if ui.imageFilter != .all { parts.append(ui.imageFilter.title) }
         return parts.joined(separator: " · ")
     }
@@ -366,10 +358,10 @@ private struct TemplateViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.templateGrouping.symbol,
-                        title: "Templates",
-                        subtitle: L10n.text("by %@ · %@", ui.templateGrouping.title, ui.templateSort.title))
+                        title: L10n.text("Templates"),
+                        subtitle: "\(L10n.text("by %@", ui.templateGrouping.title)) · \(ui.templateSort.title)")
         }
-        .help("Template grouping")
+        .help(L10n.text("Template grouping"))
     }
 }
 
@@ -400,39 +392,19 @@ private struct NetworkViewOptions: View {
             .pickerStyle(.inline)
         } labelContent: {
             optionLabel(symbol: ui.networkGrouping.symbol,
-                        title: "Networks",
+                        title: L10n.text("Networks"),
                         subtitle: networkSubtitle)
         }
-        .help("Network filters")
+        .help(L10n.text("Network filters"))
     }
 
     private var networkSubtitle: String {
-        var parts = [L10n.text("by %@", ui.networkGrouping.title)]
+        var parts = ["by \(ui.networkGrouping.title)"]
         if ui.networkFilter != .all { parts.append(ui.networkFilter.title) }
         return parts.joined(separator: " · ")
     }
 }
 
 private func optionLabel(symbol: String, title: String, subtitle: String) -> some View {
-    HStack(spacing: Tokens.Toolbar.searchIconGap) {
-        Image(systemName: symbol)
-            .font(.body)
-            .foregroundStyle(.secondary)
-            .frame(width: Tokens.Toolbar.buttonItemHeight - Tokens.Toolbar.iconInnerPadding * 2)
-        VStack(alignment: .leading, spacing: 0) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
-            Text(subtitle)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        Image(systemName: "chevron.down")
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.tertiary)
-    }
-    .lineLimit(1)
-    .padding(.trailing, Tokens.Toolbar.iconInnerPadding * 2)
-    .frame(height: Tokens.Toolbar.buttonGroupHeight)
-    .contentShape(Rectangle())
+    ToolbarTitleSubtitleLabel(symbol: symbol, title: title, subtitle: subtitle)
 }

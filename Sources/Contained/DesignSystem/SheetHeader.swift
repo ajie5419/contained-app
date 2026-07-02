@@ -15,14 +15,14 @@ struct SheetHeader<Trailing: View>: View {
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 1) {
-                Text(L10n.text(title)).font(.headline).lineLimit(1)
+                Text(title).font(.headline).lineLimit(1)
                 if let subtitle {
-                    Text(L10n.text(subtitle)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer()
             GlassButton(singleItem: true) {
-                GlassButtonItem(systemName: cancelIcon, help: L10n.text(cancelHelp), isCancel: true, action: onCancel)
+                GlassButtonItem(systemName: cancelIcon, help: cancelHelp, isCancel: true, action: onCancel)
             }
             trailing()
         }
@@ -36,45 +36,5 @@ extension SheetHeader where Trailing == EmptyView {
          cancelHelp: String = "Cancel", onCancel: @escaping () -> Void) {
         self.init(title: title, subtitle: subtitle, cancelIcon: cancelIcon, cancelHelp: cancelHelp,
                   onCancel: onCancel) { EmptyView() }
-    }
-}
-
-/// Standard in-window panel header for toolbar morphs and embedded panels.
-struct PanelHeader<Trailing: View>: View {
-    let symbol: String
-    let title: String
-    var subtitle: String?
-    var padding: CGFloat = Tokens.Space.s
-    var leadingReserve: CGFloat = 0
-    @ViewBuilder var trailing: () -> Trailing
-
-    var body: some View {
-        HStack(alignment: .center, spacing: Tokens.Space.s) {
-            if leadingReserve > 0 {
-                Color.clear
-                    .frame(width: leadingReserve, height: Tokens.Toolbar.buttonGroupHeight)
-            }
-            GlassButtonItem(systemName: symbol, help: L10n.text(title), isLabel: true)
-                .frame(width: Tokens.Toolbar.buttonGroupHeight,
-                       height: Tokens.Toolbar.buttonGroupHeight,
-                       alignment: .center)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(L10n.text(title))
-                    .font(.headline)
-                    .lineLimit(1)
-                if let subtitle {
-                    Text(L10n.text(subtitle))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(maxWidth: .infinity,
-                   minHeight: Tokens.Toolbar.buttonGroupHeight,
-                   alignment: .leading)
-            trailing()
-        }
-        .frame(minHeight: Tokens.Toolbar.buttonGroupHeight)
-        .padding(padding)
     }
 }

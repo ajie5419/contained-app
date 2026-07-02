@@ -45,7 +45,7 @@ struct PaletteResultCard: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: item.icon, tint: item.tint, backgroundOpacity: selected ? 0.24 : 0.16)
             } content: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: item.title)
                         ResourceBadgeText(text: item.kind.title,
@@ -71,18 +71,20 @@ struct PaletteResultCard: View {
     private func containerCard(_ snapshot: ContainerSnapshot) -> some View {
         let style = app.containerStyle(for: snapshot)
         let name = style.displayName(fallback: snapshot.id)
-        return ResourceGlassCard(size: .medium,
+        let cardSize: ResourceCardSize = snapshot.state == .running ? .large : .medium
+        return ResourceGlassCard(size: cardSize,
                                  isSelected: selected,
                                  fill: style.fillBackground ? style.color : nil,
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
+                                 blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: style.symbol, tint: style.color, backgroundOpacity: selected ? 0.24 : 0.16)
             } content: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: name)
                         ResourceBadgeText(text: runtimeStatusTitle(snapshot.state),
@@ -94,10 +96,18 @@ struct PaletteResultCard: View {
             } trailing: {
                 EmptyView()
             }
+        } bodyContent: {
+            EmptyView()
         } footerLeading: {
             containerStatus(snapshot)
         } footerActions: {
             accessory
+        } widget: {
+            if snapshot.state == .running {
+                containerPaletteWidget(snapshot)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+            }
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -123,12 +133,13 @@ struct PaletteResultCard: View {
                                  fillOpacity: selected ? 0.14 : style.backgroundOpacity,
                                  gradient: style.gradient,
                                  gradientAngle: style.gradientAngle,
+                                 blendMode: style.backgroundBlendMode,
                                  elevated: false,
                                  onTap: action) {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: "tag", tint: style.color, backgroundOpacity: selected ? 0.24 : 0.16)
             } content: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardMonospacedTitleText(text: Format.shortImage(reference))
                         ResourceBadgeText(text: "Tag", font: .caption2.weight(.semibold))
@@ -164,7 +175,7 @@ struct PaletteResultCard: View {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: item.tint, backgroundOpacity: selected ? 0.24 : 0.16)
             } content: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: title)
                         ResourceBadgeText(text: L10n.text(subtitle), font: .caption2.weight(.semibold))
@@ -197,7 +208,7 @@ struct PaletteResultCard: View {
                 }
                 .frame(width: Tokens.IconSize.chip, height: Tokens.IconSize.chip)
             } content: {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 1) {
                     HStack(spacing: Tokens.Space.s) {
                         ResourceCardTitleText(text: tint.displayName)
                         ResourceBadgeText(text: app.settings.accentTint == tint ? L10n.text("Current") : L10n.text("Tint"),
@@ -212,6 +223,28 @@ struct PaletteResultCard: View {
         }
         .selectionFill()
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func containerPaletteWidget(_ snapshot: ContainerSnapshot) -> some View {
+        HStack(spacing: 10) {
+            ResourceCardFooterMini {
+                Image(systemName: "clock").font(.caption2)
+            } text: {
+                ResourceCardMetricText(text: Format.uptime(since: snapshot.startedDate))
+            }
+            ResourceCardFooterMini {
+                Image(systemName: "network").font(.caption2)
+            } text: {
+                ResourceCardMetricText(text: "\(snapshot.status.networks.count)")
+            }
+            ResourceCardFooterMini {
+                Image(systemName: "shippingbox").font(.caption2)
+            } text: {
+                ResourceCardMetricText(text: Format.shortImage(snapshot.image))
+            }
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

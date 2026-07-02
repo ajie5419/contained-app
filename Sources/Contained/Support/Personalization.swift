@@ -1,6 +1,5 @@
 import SwiftUI
 import AppKit
-import ContainedCore
 
 /// Resolved visual style for a container card: a colored icon plus an optional colored glass
 /// background with adjustable opacity and gradient. Stored entirely locally (never written back to
@@ -19,6 +18,7 @@ struct Personalization: Codable, Hashable, Sendable {
     var backgroundOpacity: Double = Self.defaultBackgroundOpacity
     var gradient: Bool = true
     var gradientAngle: Double = Self.defaultGradientAngle   // degrees, 0 = leading→trailing, clockwise
+    var backgroundBlendMode: ColorLayerBlendMode = .softLight
     var widgets: [WidgetConfiguration] = WidgetConfiguration.defaultWidgets()
     var showStatusIndicator: Bool = true
     var showStatusIcon: Bool = true
@@ -71,6 +71,7 @@ struct Personalization: Codable, Hashable, Sendable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion
         case tint, iconEnabled, icon, nickname, fillBackground, backgroundOpacity, gradient, gradientAngle
+        case backgroundBlendMode
         case widgets, showStatusIndicator, showStatusIcon, showStatusText, graphMetric, graphStyle
     }
 
@@ -87,6 +88,8 @@ struct Personalization: Codable, Hashable, Sendable {
         gradient = try container.decodeIfPresent(Bool.self, forKey: .gradient) ?? true
         gradientAngle = try container.decodeIfPresent(Double.self, forKey: .gradientAngle)
             ?? Self.defaultGradientAngle
+        backgroundBlendMode = try container.decodeIfPresent(ColorLayerBlendMode.self, forKey: .backgroundBlendMode)
+            ?? .softLight
         showStatusIndicator = try container.decodeIfPresent(Bool.self, forKey: .showStatusIndicator) ?? true
         showStatusIcon = try container.decodeIfPresent(Bool.self, forKey: .showStatusIcon) ?? true
         showStatusText = try container.decodeIfPresent(Bool.self, forKey: .showStatusText) ?? true
@@ -117,6 +120,7 @@ struct Personalization: Codable, Hashable, Sendable {
         try container.encode(backgroundOpacity, forKey: .backgroundOpacity)
         try container.encode(gradient, forKey: .gradient)
         try container.encode(gradientAngle, forKey: .gradientAngle)
+        try container.encode(backgroundBlendMode, forKey: .backgroundBlendMode)
         try container.encode(widgets, forKey: .widgets)
         try container.encode(showStatusIndicator, forKey: .showStatusIndicator)
         try container.encode(showStatusIcon, forKey: .showStatusIcon)
@@ -137,6 +141,7 @@ struct Personalization: Codable, Hashable, Sendable {
         backgroundOpacity = labels["contained.bgOpacity"].flatMap(Double.init) ?? Self.defaultBackgroundOpacity
         gradient = labels["contained.gradient"] == "1"
         gradientAngle = labels["contained.bgAngle"].flatMap(Double.init) ?? Self.defaultGradientAngle
+        backgroundBlendMode = .softLight
         showStatusIndicator = true
         showStatusIcon = true
         showStatusText = true
@@ -199,299 +204,11 @@ struct Personalization: Codable, Hashable, Sendable {
         let targetCount = Self.widgetSlotCount
         var result = Array(widgets.prefix(targetCount))
         if result.count < targetCount {
-            result.append(contentsOf: Array(repeating: WidgetConfiguration(), count: targetCount - result.count))
+            result.append(contentsOf: Array(repeating: WidgetConfiguration(enabled: false),
+                                            count: targetCount - result.count))
         }
         return result
     }
 
-    static let widgetSlotCount = 4
-}
-
-struct WidgetConfiguration: Codable, Hashable, Sendable {
-    static let schemaVersion = 1
-
-    var schemaVersion: Int = Self.schemaVersion
-    var enabled: Bool = true
-    var metric: GraphMetric = .cpu
-    var style: GraphStyle = .area
-    var showIcon: Bool = true
-    var showText: Bool = true
-
-    enum CodingKeys: String, CodingKey {
-        case schemaVersion, enabled, metric, style, showIcon, showText
-    }
-
-    init() {}
-
-    init(enabled: Bool = true,
-         metric: GraphMetric = .cpu,
-         style: GraphStyle = .area,
-         showIcon: Bool = true,
-         showText: Bool = true) {
-        self.schemaVersion = Self.schemaVersion
-        self.enabled = enabled
-        self.metric = metric
-        self.style = style
-        self.showIcon = showIcon
-        self.showText = showText
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 0
-        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-        metric = try container.decodeIfPresent(GraphMetric.self, forKey: .metric) ?? .cpu
-        style = try container.decodeIfPresent(GraphStyle.self, forKey: .style) ?? .area
-        showIcon = try container.decodeIfPresent(Bool.self, forKey: .showIcon) ?? true
-        showText = try container.decodeIfPresent(Bool.self, forKey: .showText) ?? true
-        schemaVersion = Self.schemaVersion
-    }
-
-    static func defaultWidgets() -> [WidgetConfiguration] {
-        [
-            WidgetConfiguration(enabled: true, metric: .cpu, style: .area),
-            WidgetConfiguration(enabled: true, metric: .memory, style: .area),
-            WidgetConfiguration(enabled: true, metric: .netRx, style: .area),
-            WidgetConfiguration(enabled: true, metric: .netTx, style: .area)
-        ]
-    }
-}
-
-enum GraphStyle: String, CaseIterable, Identifiable, Codable, Sendable {
-    case area
-    case line
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .area: return L10n.text("Area")
-        case .line: return L10n.text("Line")
-        }
-    }
-}
-
-/// Local-only personalization store. Resolution cascades **per-container override → image default →
-/// app image default → built-in default**. Persisted to UserDefaults today (migrated to SwiftData in
-/// WS7). The CLI and the containers themselves stay clean — no labels are ever written.
-@MainActor
-@Observable
-final class PersonalizationStore {
-    private var overrides: [String: Personalization]      // keyed by container id (== stable name)
-    private var imageDefaults: [String: Personalization]   // keyed by image reference
-    private var volumeStyles: [String: Personalization]    // keyed by volume name
-    private(set) var defaultImageStyle: Personalization
-    private let defaults: UserDefaults
-    private enum Keys {
-        static let overrides = "personalizationOverrides"
-        static let imageDefaults = "personalizationImageDefaults"
-        static let volumeStyles = "personalizationVolumeStyles"
-        static let defaultImageStyle = "personalizationDefaultImageStyle"
-        static let migrated = "personalizationLabelsMigrated"
-    }
-
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
-        overrides = Self.load(defaults, Keys.overrides)
-        imageDefaults = Self.load(defaults, Keys.imageDefaults)
-        volumeStyles = Self.load(defaults, Keys.volumeStyles)
-        defaultImageStyle = Self.loadStyle(defaults, Keys.defaultImageStyle) ?? Personalization()
-    }
-
-    func backupSnapshot() -> PersonalizationBackup {
-        PersonalizationBackup(overrides: overrides,
-                              imageDefaults: imageDefaults,
-                              volumeStyles: volumeStyles,
-                              defaultImageStyle: defaultImageStyle)
-    }
-
-    func applyBackup(_ snapshot: PersonalizationBackup, replace: Bool) {
-        if replace {
-            overrides = snapshot.overrides
-            imageDefaults = snapshot.imageDefaults
-            volumeStyles = snapshot.volumeStyles
-        } else {
-            overrides.merge(snapshot.overrides) { _, imported in imported }
-            imageDefaults.merge(snapshot.imageDefaults) { _, imported in imported }
-            volumeStyles.merge(snapshot.volumeStyles) { _, imported in imported }
-        }
-        defaultImageStyle = snapshot.defaultImageStyle
-        persist(Keys.overrides, overrides)
-        persist(Keys.imageDefaults, imageDefaults)
-        persist(Keys.volumeStyles, volumeStyles)
-        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
-    }
-
-    func purgeOrphans(liveContainerIDs: Set<String>, liveImageRefs: Set<String>) -> Int {
-        let before = overrides.count + imageDefaults.count + volumeStyles.count
-        overrides = overrides.filter { liveContainerIDs.contains($0.key) }
-        imageDefaults = imageDefaults.filter { key, _ in
-            key.hasPrefix("image-group:") || liveImageRefs.contains(key)
-        }
-        persist(Keys.overrides, overrides)
-        persist(Keys.imageDefaults, imageDefaults)
-        persist(Keys.volumeStyles, volumeStyles)
-        return before - (overrides.count + imageDefaults.count + volumeStyles.count)
-    }
-
-    private static func load(_ defaults: UserDefaults, _ key: String) -> [String: Personalization] {
-        guard let data = defaults.data(forKey: key),
-              let decoded = try? JSONDecoder().decode([String: Personalization].self, from: data) else { return [:] }
-        var migrated: [String: Personalization] = [:]
-        var changed = false
-        for (entryKey, entryValue) in decoded {
-            let normalized = entryValue.normalizedForPersistence()
-            if normalized != entryValue { changed = true }
-            if !normalized.isDefault {
-                migrated[entryKey] = normalized
-            } else if decoded[entryKey] != nil {
-                changed = true
-            }
-        }
-        if changed {
-            persist(defaults, key, migrated)
-        }
-        return migrated
-    }
-
-    private static func meaningful(_ personalization: Personalization?) -> Personalization? {
-        guard let personalization, !personalization.isDefault else { return nil }
-        return personalization.normalizedForPersistence()
-    }
-
-    /// Resolve a container's effective style: per-container override → image default → fallback.
-    func resolved(id: String,
-                  image: String,
-                  groupID: String? = nil,
-                  fallback: Personalization = Personalization()) -> Personalization {
-        Self.meaningful(overrides[id]) ?? imageDefault(for: image, groupID: groupID) ?? fallback
-    }
-
-    // MARK: Per-container overrides
-
-    func hasOverride(id: String) -> Bool { Self.meaningful(overrides[id]) != nil }
-
-    func setOverride(_ personalization: Personalization, for id: String) {
-        if personalization.isDefault {
-            clearOverride(id: id)
-            return
-        }
-        overrides[id] = personalization.normalizedForPersistence()
-        persist(Keys.overrides, overrides)
-    }
-
-    func clearOverride(id: String) {
-        overrides[id] = nil
-        persist(Keys.overrides, overrides)
-    }
-
-    // MARK: Image-level defaults
-
-    func imageDefault(for image: String) -> Personalization? { Self.meaningful(imageDefaults[image]) }
-
-    func imageDefault(for image: String, groupID: String?) -> Personalization? {
-        Self.meaningful(imageDefaults[image]) ?? groupID.flatMap { Self.meaningful(imageDefaults[Self.imageGroupKey($0)]) }
-    }
-
-    func imageGroupDefault(for groupID: String) -> Personalization? { Self.meaningful(imageDefaults[Self.imageGroupKey(groupID)]) }
-
-    func setImageDefault(_ personalization: Personalization, for image: String) {
-        if personalization.isDefault {
-            clearImageDefault(for: image)
-            return
-        }
-        imageDefaults[image] = personalization.normalizedForPersistence()
-        persist(Keys.imageDefaults, imageDefaults)
-    }
-
-    func setImageGroupDefault(_ personalization: Personalization, for groupID: String) {
-        if personalization.isDefault {
-            clearImageGroupDefault(for: groupID)
-            return
-        }
-        imageDefaults[Self.imageGroupKey(groupID)] = personalization.normalizedForPersistence()
-        persist(Keys.imageDefaults, imageDefaults)
-    }
-
-    func clearImageDefault(for image: String) {
-        imageDefaults[image] = nil
-        persist(Keys.imageDefaults, imageDefaults)
-    }
-
-    func clearImageGroupDefault(for groupID: String) {
-        imageDefaults[Self.imageGroupKey(groupID)] = nil
-        persist(Keys.imageDefaults, imageDefaults)
-    }
-
-    static func imageGroupKey(_ groupID: String) -> String {
-        "image-group:\(groupID)"
-    }
-
-    // MARK: App-wide image default
-
-    func setDefaultImageStyle(_ personalization: Personalization) {
-        defaultImageStyle = personalization.normalizedForPersistence()
-        Self.persist(defaults, Keys.defaultImageStyle, defaultImageStyle)
-    }
-
-    // MARK: Volume styles (direct, keyed by volume name)
-
-    func volumeStyle(for name: String) -> Personalization? { Self.meaningful(volumeStyles[name]) }
-
-    func setVolumeStyle(_ personalization: Personalization, for name: String) {
-        if personalization.isDefault {
-            clearVolumeStyle(for: name)
-            return
-        }
-        volumeStyles[name] = personalization.normalizedForPersistence()
-        persist(Keys.volumeStyles, volumeStyles)
-    }
-
-    func clearVolumeStyle(for name: String) {
-        volumeStyles[name] = nil
-        persist(Keys.volumeStyles, volumeStyles)
-    }
-
-    // MARK: One-time migration
-
-    /// Import legacy `contained.*` styles from existing containers into per-container overrides, once.
-    /// Runs after the first container refresh so older users keep their card styles when we stop
-    /// writing labels.
-    func migrateLegacyLabelsIfNeeded(_ snapshots: [ContainerSnapshot]) {
-        guard !defaults.bool(forKey: Keys.migrated) else { return }
-        for snapshot in snapshots where Personalization.hasLegacyLabels(snapshot.configuration.labels) {
-            if overrides[snapshot.id] == nil {
-                overrides[snapshot.id] = Personalization(migratingLabels: snapshot.configuration.labels)
-            }
-        }
-        persist(Keys.overrides, overrides)
-        defaults.set(true, forKey: Keys.migrated)
-    }
-
-    private static func persist(_ defaults: UserDefaults, _ key: String, _ value: [String: Personalization]) {
-        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
-    }
-
-    private static func loadStyle(_ defaults: UserDefaults, _ key: String) -> Personalization? {
-        guard let data = defaults.data(forKey: key),
-              let decoded = try? JSONDecoder().decode(Personalization.self, from: data) else { return nil }
-        let normalized = decoded.normalizedForPersistence()
-        if normalized != decoded { persist(defaults, key, normalized) }
-        return normalized
-    }
-
-    private static func persist(_ defaults: UserDefaults, _ key: String, _ value: Personalization) {
-        if let data = try? JSONEncoder().encode(value.normalizedForPersistence()) { defaults.set(data, forKey: key) }
-    }
-
-    private func persist(_ key: String, _ value: [String: Personalization]) {
-        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
-    }
-}
-
-struct PersonalizationBackup: Codable, Equatable {
-    var overrides: [String: Personalization]
-    var imageDefaults: [String: Personalization]
-    var volumeStyles: [String: Personalization] = [:]
-    var defaultImageStyle: Personalization = Personalization()
+    static let widgetSlotCount = 5
 }

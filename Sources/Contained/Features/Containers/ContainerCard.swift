@@ -15,6 +15,7 @@ struct ContainerCard: View {
     var isBusy: Bool
     var hasImageUpdate: Bool = false
     var isExpanded: Bool = false
+    var cornerRadiusOverride: CGFloat?
     /// Whether the expanded card's controls (footer buttons + close) are shown. The grid drops this
     /// the instant a close begins so the glass buttons fade out *before* the shrink finishes.
     var controlsVisible: Bool = true
@@ -55,6 +56,7 @@ struct ContainerCard: View {
         case inspect = "Inspect"
 
         var id: String { rawValue }
+        var title: String { L10n.text(rawValue) }
 
         var systemImage: String {
             switch self {
@@ -79,6 +81,12 @@ struct ContainerCard: View {
         return enabled.contains(selectedWidgetIndex) ? selectedWidgetIndex : (enabled.first ?? 0)
     }
     private var activeWidget: WidgetConfiguration { styleForDisplay.widget(at: activeWidgetIndex) }
+    private var activeWidgetColor: Color { activeWidget.tint?.color ?? tint }
+    private var activeWidgetComparisonMetric: GraphMetric? {
+        activeWidget.style.resolvedSecondaryMetric(primary: activeWidget.metric,
+                                                   requested: activeWidget.secondaryMetric,
+                                                   options: GraphMetric.allCases)
+    }
     private var cardSize: ResourceCardSize { density.resourceSize }
 
     var body: some View {
@@ -119,12 +127,14 @@ struct ContainerCard: View {
     private var cardSurface: some View {
         ResourceGlassCard(size: cardSize,
                           isExpanded: isExpanded,
+                          cornerRadiusOverride: cornerRadiusOverride,
                           controlsVisible: controlsVisible,
                           isSelected: isSelected,
                           fill: styleForDisplay.fillBackground ? styleForDisplay.color : nil,
                           fillOpacity: styleForDisplay.backgroundOpacity,
                           gradient: styleForDisplay.gradient,
                           gradientAngle: styleForDisplay.gradientAngle,
+                          blendMode: styleForDisplay.backgroundBlendMode,
                           onTap: onTap) {
             headerRow(controlsReveal: controlsVisible ? 1 : 0)
         } bodyContent: {
@@ -140,8 +150,14 @@ struct ContainerCard: View {
             footerActions
         } widget: {
             LiveSparkline(samples: histories[activeWidget.metric] ?? history,
-                          color: tint,
-                          style: activeWidget.style)
+                          comparisonSamples: activeWidgetComparisonMetric.flatMap { histories[$0] } ?? [],
+                          color: activeWidgetColor,
+                          lineWidth: activeWidget.lineWidth,
+                          style: activeWidget.style,
+                          areaUsesGradient: activeWidget.areaUsesGradient,
+                          interpolation: activeWidget.interpolation,
+                          pointSize: activeWidget.pointSize,
+                          barWidth: activeWidget.barWidth)
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
         }
@@ -309,9 +325,11 @@ struct ContainerCard: View {
     @ViewBuilder
     private var expandedPageButtons: some View {
         ForEach(Tab.allCases) { item in
-            GlassButtonItem(help: item.rawValue, isIcon: true, action: { tab = item }) {
+            GlassButtonItem(tint: tab == item ? tint : .secondary,
+                            help: item.title,
+                            isIcon: true,
+                            action: { tab = item }) {
                 Image(systemName: item.systemImage)
-                    .foregroundStyle(tab == item ? Color.accentColor : Color.secondary)
                     .opacity(tab == item ? 1 : 0.62)
             }
         }
@@ -351,14 +369,14 @@ struct ContainerCard: View {
         } label: {
             ResourceCardFooterMini {
                 if widget.showIcon {
-                    Image(systemName: widget.metric.systemImage).font(.caption2)
+                    Image(systemName: widget.resolvedSystemImage).font(.caption2)
                 }
             } text: {
                 if widget.showText {
                     ResourceCardMetricText(text: stats.map(widget.metric.chipCaption(from:)) ?? "—")
                 }
             }
-            .foregroundStyle(active ? AnyShapeStyle(tint) : AnyShapeStyle(.secondary))
+            .foregroundStyle(active ? AnyShapeStyle(widget.tint?.color ?? tint) : AnyShapeStyle(.secondary))
         }
         .buttonStyle(.plain)
         .help(widget.metric.displayName)

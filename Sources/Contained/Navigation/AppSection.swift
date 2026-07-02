@@ -3,6 +3,7 @@ import SwiftUI
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
     case containers
     case images
+    case build
     case volumes
     case networks
     case system
@@ -14,6 +15,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     static let allCases: [AppSection] = [
         .containers,
         .images,
+        .build,
         .volumes,
         .networks,
         .system,
@@ -31,7 +33,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
     func isNavigable(panelNavigationEnabled: Bool) -> Bool {
         guard panelNavigationEnabled else { return true }
         switch self {
-        case .system, .activity, .settings:
+        case .build, .system, .activity, .settings:
             return false
         default:
             return true
@@ -44,6 +46,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .containers: return L10n.text("Containers")
         case .images: return L10n.text("Images")
+        case .build: return L10n.text("Build")
         case .volumes: return L10n.text("Volumes")
         case .networks: return L10n.text("Networks")
         case .system: return L10n.text("System")
@@ -58,6 +61,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .containers: return "shippingbox"
         case .images: return "square.stack.3d.up"
+        case .build: return "hammer"
         case .volumes: return "externaldrive"
         case .networks: return "network"
         case .system: return "gearshape.2"
@@ -70,7 +74,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var group: AppSectionGroup {
         switch self {
-        case .containers, .images, .templates:
+        case .containers, .images, .build, .templates:
             return .workloads
         case .volumes, .networks, .registries:
             return .infra

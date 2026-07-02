@@ -80,7 +80,8 @@ private struct AppSidebar: View {
     var body: some View {
         List(selection: $selection) {
             ForEach(AppSectionGroup.allCases) { group in
-                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled).filter { $0.group == group }
+                let sections = AppSection.navigableSections(panelNavigationEnabled: ui.panelNavigationEnabled)
+                    .filter { $0.group == group && isVisible($0) }
                 if !sections.isEmpty {
                     Section(group.title) {
                         ForEach(sections) { section in
@@ -106,6 +107,10 @@ private struct AppSidebar: View {
         .listStyle(.sidebar)
         .tint(app.settings.accentTint.color)
         .navigationTitle("Contained")
+    }
+
+    private func isVisible(_ section: AppSection) -> Bool {
+        section != .build || app.settings.imageBuildEnabled
     }
 
     private func badge(for section: AppSection) -> String? {
@@ -137,6 +142,8 @@ private struct ClassicSectionPage: View {
             ContainersGridView()
         case .images:
             ImagesPage()
+        case .build:
+            BuildPage()
         case .volumes:
             SystemContent(initialPage: .volumes, showClose: false, elevated: false, usesToolbarSelection: false)
         case .networks:
@@ -151,6 +158,19 @@ private struct ClassicSectionPage: View {
             ActivityContent(showClose: false, elevated: false)
         case .settings:
             SettingsContent()
+        }
+    }
+}
+
+private struct BuildPage: View {
+    var body: some View {
+        PageScaffold(symbol: "hammer",
+                     title: "Build",
+                     subtitle: "From a Dockerfile + build context") {
+            EmptyView()
+        } content: {
+            BuildWorkspaceView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -255,7 +275,11 @@ private struct NetworksPage: View {
             }
         } footerLeading: {
             if network.isBuiltin {
-                ResourceBadgeText(text: "builtin", font: .caption2.weight(.medium))
+                ResourceCardFooterMini {
+                    Image(systemName: "network.badge.shield.half.filled").font(.caption2)
+                } text: {
+                    ResourceCardMetricText(text: "Built-in")
+                }
             }
         } footerActions: {
             EmptyView()

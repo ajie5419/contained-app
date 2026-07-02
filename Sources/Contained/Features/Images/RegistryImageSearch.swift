@@ -43,7 +43,7 @@ struct RegistryImageSearch: View {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("Search Docker Hub…", text: $query)
                     .textFieldStyle(.plain)
-                    .onSubmit { runSearch() }
+                    .onSubmit { searchNow() }
                 if searching { ProgressView().controlSize(.small) }
                 else if !query.isEmpty {
                     Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
@@ -89,13 +89,10 @@ struct RegistryImageSearch: View {
 
     private func quickPick(symbol: String, title: String, subtitle: String,
                            action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            choiceCard(symbol: symbol, title: title, subtitle: subtitle) {
-                GlassListRowChevron()
-            }
-            .contentShape(Rectangle())
+        choiceCard(symbol: symbol, title: title, subtitle: subtitle, action: action) {
+            GlassListRowChevron()
         }
-        .buttonStyle(.plain)
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: Results
@@ -111,7 +108,7 @@ struct RegistryImageSearch: View {
                     Image(systemName: "wifi.exclamationmark").font(.title2).foregroundStyle(.orange)
                     Text("Couldn't search Docker Hub").font(.callout.weight(.medium))
                     Text(errorMessage).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Button { runSearch() } label: { Label("Retry", systemImage: "arrow.clockwise") }
+                    Button { searchNow() } label: { Label("Retry", systemImage: "arrow.clockwise") }
                         .buttonStyle(.glass)
                 } else {
                     Image(systemName: "magnifyingglass").font(.title2).foregroundStyle(.tertiary)
@@ -124,11 +121,8 @@ struct RegistryImageSearch: View {
             ScrollView {
                 LazyVStack(spacing: Tokens.Space.xs) {
                     ForEach(results) { result in
-                        Button { onSelect(RecommendedImage.spec(for: result.pullReference)) } label: {
-                            resultRow(result)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
+                        resultRow(result)
+                            .accessibilityAddTraits(.isButton)
                     }
                 }
             }
@@ -138,7 +132,8 @@ struct RegistryImageSearch: View {
     private func resultRow(_ result: HubSearchResult) -> some View {
         choiceCard(symbol: "shippingbox",
                    title: result.repoName,
-                   subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil) {
+                   subtitle: result.shortDescription?.isEmpty == false ? result.shortDescription : nil,
+                   action: { onSelect(RecommendedImage.spec(for: result.pullReference)) }) {
             HStack(spacing: Tokens.Space.s) {
                 if result.isOfficial {
                     Image(systemName: "checkmark.seal.fill").font(.caption2).foregroundStyle(.blue)
@@ -154,8 +149,9 @@ struct RegistryImageSearch: View {
     private func choiceCard<Accessory: View>(symbol: String,
                                              title: String,
                                              subtitle: String?,
+                                             action: @escaping () -> Void,
                                              @ViewBuilder accessory: @escaping () -> Accessory) -> some View {
-        ResourceGlassCard(size: .small, elevated: false) {
+        ResourceGlassCard(size: .small, elevated: false, onTap: action) {
             ResourceCardHeader {
                 ResourceCardIconChip(symbol: symbol, tint: .accentColor)
             } content: {
@@ -174,7 +170,8 @@ struct RegistryImageSearch: View {
 
     // MARK: Search plumbing
 
-    /// Debounce typing, then search.
+    /// Debounce typing, then search. The task owns the network request so cancellation cannot leave
+    /// an older query racing to overwrite the newest results.
     private func scheduleSearch() {
         searchTask?.cancel()
         errorMessage = nil
@@ -182,8 +179,14 @@ struct RegistryImageSearch: View {
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled, current == query else { return }
-            runSearch()
+            await runSearch(current)
         }
+    }
+
+    private func searchNow() {
+        searchTask?.cancel()
+        let current = query
+        searchTask = Task { await runSearch(current) }
     }
 
     private func applyInitialQuery() {
@@ -194,8 +197,9 @@ struct RegistryImageSearch: View {
         query = trimmed
     }
 
-    private func runSearch() {
-        guard let url = HubSearch.url(query: query) else {
+    @MainActor
+    private func runSearch(_ searchQuery: String) async {
+        guard HubSearch.url(query: searchQuery) != nil else {
             results = []
             searching = false
             errorMessage = nil
@@ -203,21 +207,15 @@ struct RegistryImageSearch: View {
         }
         searching = true
         errorMessage = nil
-        Task {
-            defer { searching = false }
-            do {
-                let (data, response) = try await URLSession.shared.data(from: url)
-                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                    throw URLError(.badServerResponse)
-                }
-                let decoded = try JSONDecoder().decode(HubSearchResponse.self, from: data)
-                if !Task.isCancelled { results = decoded.results }
-            } catch {
-                if !Task.isCancelled {
-                    results = []
-                    errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                }
-            }
+        defer { searching = false }
+        do {
+            let searchResults = try await HubSearch.results(query: searchQuery)
+            guard !Task.isCancelled, searchQuery == query else { return }
+            results = searchResults
+        } catch {
+            guard !Task.isCancelled, searchQuery == query else { return }
+            results = []
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         }
     }
 }

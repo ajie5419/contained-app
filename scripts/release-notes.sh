@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Write Sparkle release-note HTML fragments next to each archive in an updates directory.
+# Write composed Sparkle release-note HTML fragments next to each archive in an updates directory.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,15 +15,27 @@ fragment="$(VERSION_VALUE="$VERSION_VALUE" CHANGELOG="$CHANGELOG" ./scripts/rele
 
 html="$(printf '%s\n' "$fragment" | awk '
   BEGIN { in_list=0 }
+  /^## / {
+    if (in_list) { print "</ul>"; in_list=0 }
+    sub(/^## /, "")
+    print "<h2>" $0 "</h2>"
+    next
+  }
   /^### / {
     if (in_list) { print "</ul>"; in_list=0 }
     sub(/^### /, "")
     print "<h3>" $0 "</h3>"
     next
   }
-  /^- / {
+  /^#### / {
+    if (in_list) { print "</ul>"; in_list=0 }
+    sub(/^#### /, "")
+    print "<h4>" $0 "</h4>"
+    next
+  }
+  /^[[:space:]]*- / {
     if (!in_list) { print "<ul>"; in_list=1 }
-    sub(/^- /, "")
+    sub(/^[[:space:]]*- /, "")
     print "<li>" $0 "</li>"
     next
   }

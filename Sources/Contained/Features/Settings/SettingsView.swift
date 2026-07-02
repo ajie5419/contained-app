@@ -25,17 +25,7 @@ struct SettingsContent: View {
 
         var id: String { rawValue }
 
-        var title: String {
-            switch self {
-            case .appearance: return L10n.text("Appearance")
-            case .general: return L10n.text("General")
-            case .runtime: return L10n.text("Runtime")
-            case .registries: return L10n.text("Registries")
-            case .experimental: return L10n.text("Experimental")
-            case .updates: return L10n.text("Updates")
-            case .about: return L10n.text("About")
-            }
-        }
+        var title: String { L10n.text(rawValue) }
 
         var systemImage: String {
             switch self {
@@ -88,12 +78,14 @@ struct SettingsContent: View {
     private var header: some View {
         PanelHeader(symbol: page.systemImage,
                     title: "Settings",
-                    subtitle: page.title) {
+                    subtitle: page.rawValue) {
             GlassButton {
                 ForEach(SettingsPage.allCases) { item in
-                    GlassButtonItem(help: item.title, isIcon: true, action: { page = item }) {
+                    GlassButtonItem(tint: page == item ? .accentColor : .secondary,
+                                    help: item.title,
+                                    isIcon: true,
+                                    action: { page = item }) {
                         Image(systemName: item.systemImage)
-                            .foregroundStyle(page == item ? Color.accentColor : Color.secondary)
                             .opacity(page == item ? 1 : 0.62)
                     }
                 }
