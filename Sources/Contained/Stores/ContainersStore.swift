@@ -43,9 +43,6 @@ final class ContainersStore {
     func refresh() async {
         refreshRequested = true
         if refreshTask != nil {
-            logger?.record("Refresh already in flight; coalescing another pass",
-                           category: .system,
-                           severity: .debug)
             diagnosticLogger.debug("Refresh already in flight; coalescing another pass")
         }
         await refreshTaskOrStart().value
@@ -72,9 +69,6 @@ final class ContainersStore {
         let elapsed = Date().timeIntervalSince(started)
         if elapsed >= 0.75 || passes > 1 {
             let suffix = passes == 1 ? "" : "es"
-            logger?.record("Refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))))s across \(passes) pass\(passes == 1 ? "" : "es")",
-                           category: .system,
-                           severity: elapsed >= 1.5 ? .warning : .info)
             diagnosticLogger.log(level: elapsed >= 1.5 ? .default : .info,
                                  "Refresh finished in \(elapsed.formatted(.number.precision(.fractionLength(2))), privacy: .public)s across \(passes, privacy: .public) pass\(suffix, privacy: .public)")
         }

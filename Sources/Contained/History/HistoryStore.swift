@@ -39,12 +39,20 @@ final class HistoryStore {
     // MARK: Writes
 
     func record(_ kind: EventKind, containerID: String? = nil, message: String, at date: Date = Date()) {
-        let key = [kind.rawValue, containerID ?? "", message].joined(separator: "\u{1F}")
+        let key = [kind.rawValue, containerID ?? "", duplicateKeyMessage(for: message)].joined(separator: "\u{1F}")
         if let last = recentEvents[key], date.timeIntervalSince(last) < duplicateEventWindow { return }
         recentEvents[key] = date
         recentEvents = recentEvents.filter { date.timeIntervalSince($0.value) < duplicateEventWindow }
         context.insert(EventRecord(timestamp: date, containerID: containerID, kind: kind, message: message))
         try? context.save()
+    }
+
+    /// Collapse volatile duration/count fragments so operational bursts do not bypass duplicate
+    /// suppression solely because each message contains a fresh elapsed time or pass count.
+    private func duplicateKeyMessage(for message: String) -> String {
+        message
+            .replacing(/\d+(\.\d+)?s/, with: "#s")
+            .replacing(/\d+ pass(es)?/, with: "# passes")
     }
 
     /// Persist a metric sample for each running container, throttled to `metricInterval`.
